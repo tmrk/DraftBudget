@@ -1,42 +1,81 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap');
 
 * {
-margin: 0;
-padding: 0;
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+}
+
+.hidden {
+  display: none!important;
+}
+
+.alignright {
+  text-align: right;
 }
 
 body {
   margin: 50px;
   font-family: 'Roboto Mono', monospace;
+  background: #000;
+  color: rgba(255,255,255,0.9);
 }
 
-p {
-  margin: 50px auto;
-  padding: 20px;
-  background: #f4f4f4;
+li.line {
+  background: rgba(255,255,255,0.1);
 }
 
-code {
-  padding: 5px 10px;
-  background: rgba(255,255,255,0.5);
-  font-family: 'Roboto Mono', monospace;
+.props > span {
+  padding-right: 1ch;
   display: inline-block;
+  overflow: hidden;
 }
 
-code::before {
-  content: "> ";
-  font-size: 1rem;
+.props > .col1 { width: 8ch; }
+.props > .col2 { width: 14ch; }
+.props > .col3 { width: 3ch; }
+.props > .col4 { width: 5ch; }
+.props > .col5 { width: 2ch; }
+.props > .col6 { width: 5ch; }
+.props > .col7 { width: 10ch; }
+.props > .col8 { width: 3ch; }
+.props > .col9 { width: 23ch; }
+
+.props > .col9 > span::before {
+  content: "| "
+}
+
+.props > .col9 > span { 
+  padding-right: 1ch; 
   font-weight: bold;
+  cursor: pointer;
 }
 
-section {
-  margin: 0 auto;
-  padding: 0 20px;
-  display: flex;
-  justify-content: center;
-  gap: 100px;
+.props > .col9 > span:hover {
+  color: green;
 }
 
-section > div {
-  min-width: 23ch;
+#export {
+  margin: 20px 0 0;
+  text-align: center;
+}
+
+#export > span {
+  padding: 10px;
+  display: inline-block;
+  cursor: pointer;
+}
+
+#export > span:hover {
+  color: yellow;
+}
+
+pre {
+  background: rgba(255,255,255,0.1);
+  max-height: 400px;
+  padding: 20px;
+  border-radius: 20px;
+  line-height: 1.2rem;
+  text-align: left;
+  overflow-x: auto;
 }

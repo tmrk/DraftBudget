@@ -2,6 +2,8 @@
 
 /* ----- Variables ----- */
 
+const D = document;
+const B = document.body;
 let config = {
   roundDecimals: 2,
   showDecimals: 2,
@@ -19,10 +21,11 @@ let config = {
   default: {
     currency: 'USD',
     lineColours: [
-      'rgba(0,0,0,0.5)',
-      'rgba(0,0,0,0.3)',
-      'rgba(0,0,0,0.1)',
-      'rgba(0,0,0,0.05)'
+      'rgba(255,255,255,0.1)',
+      'rgba(255,255,255,0.2)',
+      'rgba(255,255,255,0.3)',
+      'rgba(255,255,255,0.4)',
+      'rgba(255,255,255,0.5)'
     ],
     warnBeforeDelete: false
   }
@@ -35,6 +38,30 @@ let symbols = {};
 let rates = {};
 
 /* ----- Functions ----- */
+
+// Node generator, syntax: n('tag#id.class|attribute=value', content/[content], {'event': function() {...})
+const n = (tag, content, listener) => {
+  var el = document.createElement(tag.split('#')[0].split('.')[0].split('|').shift());
+  if (tag.split('#')[1]) el.id = tag.split('#')[1].split('.')[0].split('|')[0];
+  if (tag.split('.')[1]) el.classList.add(...tag.split('.').slice(1).join('.').split('|')[0].split('.'));
+  if (tag.split('|')[1]) {
+      var attrTemp = tag.split('|').slice(1);
+      for (var i = 0; i < attrTemp.length; i++) el.setAttribute(attrTemp[i].split('=')[0], attrTemp[i].split('=')[1]);
+  }
+  if (content) {
+      if (typeof content === 'string' || typeof content === 'number') {
+        el.insertAdjacentHTML('beforeend', content);
+      }
+      else if (content.constructor === Array) for (var i = 0; i < content.length; i++) {
+          if (typeof content === 'string' || typeof content === 'number') {
+            el.insertAdjacentHTML('beforeend', content[i]);
+          } else el.appendChild(content[i]);
+      }
+      else el.appendChild(content);
+  }
+  if (listener) for (var event in listener) if (listener.hasOwnProperty(event)) el.addEventListener(event, listener[event]);
+  return el;
+}
 
 const fetch = function (base) {
   let request = new XMLHttpRequest();
@@ -96,15 +123,15 @@ const log = function (message, type, timestamp) {
     t: type,
     ts: timestamp
   });
-  localStorage.setItem('syslog', JSON.stringify(syslog));
+  //localStorage.setItem('syslog', JSON.stringify(syslog));
   console[type](message);
 }
 
-const loadRates = function () {
-  // Only fetch new rates if they're outdated
+const loadRates = function (forceRefresh) {
+  // Only fetch new rates if they're outdated or if a refresh is forced
   if (!localStorage.getItem('rates') ||
-      localStorage.getItem('ratesUpdated') <
-      new Date().toISOString().split('T')[0]) {
+      localStorage.getItem('ratesUpdated') < dateISO(new Date()) ||
+      forceRefresh) {
         if (localStorage.getItem('rates')
         && localStorage.getItem('ratesLocked')) {
           log('Exchange rates loaded from cache (locked on '
@@ -139,6 +166,15 @@ const start = function () {
     log('Back online.', 'info');
   });
 
+  const viewExport = n("div#export", [
+    n("span", "Show current data", {click: () => {
+      document.getElementById("exportoutput").classList.toggle("hidden");
+    }}),
+    n("pre#exportoutput.hidden")
+  ]);
+
+  document.body.appendChild(viewExport);
+
   addMockData();
 }
 
@@ -163,6 +199,13 @@ const addMockData = function () {
   console.log(budget);
 }
 
+const exportJSON = (data, targetID) => {
+  const dataString = JSON.stringify(data, 2, 2);
+  const target = document.getElementById(targetID);
+  target.textContent = dataString;
+}
+
+
 /* ----- Line code ----- */
 
 class Line {
@@ -175,6 +218,39 @@ class Line {
     this.currency = this.currency || config.default.currency;
     if (!this._start) this.start = new Date().getTime();
     if (!this._end) this.end = this._start + 86400000;
+
+    this.viewProps = {
+      index: n('span.col1.index', this.index),
+      title: n('span.col2.title.editable', this.title),
+      unitType: n('span.col3.unittype.editable', this.unitType),
+      unitCost: n('span.col4.unitcost.alignright.editable', formatN(this.unitCost)),
+      frequency: n('span.col5.frequency.alignright.editable', this.frequency),
+      cost: n('span.col6.cost.alignright.editable', formatN(this.cost)),
+      total: n('span.col7.total.alignright', formatN(this.total)),
+      currency: n('span.col8.currency.editable', this.currency),
+      tools: n('span.col9.tools')
+    };
+    const viewProps = n("div.props", [
+      this.viewProps.index,
+      this.viewProps.title,
+      this.viewProps.unitType,
+      this.viewProps.unitCost,
+      this.viewProps.frequency,
+      this.viewProps.cost,
+      this.viewProps.total,
+      this.viewProps.currency,
+      this.viewProps.tools
+    ]);
+    this.viewChildren = n("ul");
+    
+    for (var property in this.viewProps) {
+      this.viewProps[property].setAttribute('data-property', property)
+    }
+    
+    this.view = n('li.line', [
+      viewProps,
+      this.viewChildren
+    ]);
   }
 
   /* --- Setters --- */
@@ -225,7 +301,7 @@ class Line {
   }
 
   get title () {
-    let title = this._title || this.levelName + ' ' + this.lineNumber;
+    let title = this._title || this.levelName + "-" + this.lineNumber;
     return title.trim();
   }
 
@@ -334,7 +410,7 @@ class Line {
   get cost () {
     if (this.unit && this.frequency && this.unitCost) {
       return this.unit * this.frequency * this.unitCost;
-    } else return false;
+    } else return 0;
   }
 
   get total () {
@@ -369,6 +445,67 @@ class Line {
     return currencies.sort();
   }
 
+  /* --- View --- */
+
+  viewAdd (newLine) {
+    this.viewChildren.appendChild(newLine.view);    
+    newLine.viewUpdate();
+    newLine.parent.viewUpdate();
+  }
+
+  viewRemove () {
+    this.view.remove();
+  }
+
+  viewUpdate (options, recursive) {
+    if (recursive && this.children) {
+      for (let i = 0; i < this.children.length; i++) {
+        this.children[i].viewUpdate(options, true);
+      }
+    }
+    if (options) {
+      for (let v in options) {
+        if (options.hasOwnProperty(v) && this.viewProps[v]) {
+          this.viewProps[v].textContent = options[v];
+        }
+      }
+    } else {
+      for (let property in this.viewProps) {
+        if (this.viewProps.hasOwnProperty(property)) {
+          this.viewProps[property].textContent = this[property];
+        }
+      }
+    }
+
+    const buttonDelete = n('span.button.delete',
+      n('span', 'Delete'),
+      {click: function () {
+          this.remove();
+        }.bind(this)
+      }
+    );
+
+    const buttonAdd = n("span.button.add",
+      n("span", "Add Subline"),
+      {click: function () {
+          this.add();  
+        }.bind(this)
+      }
+    );
+
+    this.viewProps.tools.append(buttonDelete, buttonAdd);
+    exportJSON(budget, "exportoutput"); // for debugging
+
+  }
+
+  appendToBody () {
+    if (!this.root.appendedToBody) {
+      document.body.appendChild(n("ul", this.root.view));
+      this.root.appendedToBody = true;
+    } else log("The root of this budget has already been added to the page.", "error");
+  }
+
+  
   /* --- Methods --- */
 
   add (options = {}, index) {
@@ -401,12 +538,17 @@ class Line {
       } else this.children.push(newLine);
     } else newParent.children = [newLine];
     if (!quietMode) log('New line added ' + newLine.index);
+
+    newParent.viewAdd(newLine);
   }
 
-  removeLine (quietMode) {
+  remove (quietMode) {
+    this.viewRemove();
+    const parent = this.parent;
     let index = this.index;
     let lineNumber = this.lineNumber;
     this.parent.children.splice(lineNumber - 1, 1);
+    this.parent.viewUpdate(false, true);
     if (!quietMode) {
       log('Line ' + index + ' deleted', 'info');
     }
@@ -534,10 +676,11 @@ class Line {
       }
     }
   }
-
+  
 }
 
 budget = new Line();
+budget.appendToBody();
 
 loadRates();
 
