@@ -188,10 +188,10 @@ const addMockData = function (b) {
     })
     b.getLine(1).getLine(2).add();
     b.getLine(2).add();
-    b.getLine(2).getLine(1).add({unitCost: 333, currency: 'GBP'});
+    b.getLine(2).getLine(1).add({unitCost: 333, unitType: "pcs", currency: 'GBP'});
     b.getLine(2).getLine(1).add({unitCost: 444, currency: 'MXN'});
     b.getLine(2).getLine(1).add({unitCost: 555, currency: 'HKD'});
-    b.viewUpdate(false, "down");
+    b.viewUpdate("down");
     quietMode = false;
     console.log(budget);
   }
@@ -211,13 +211,39 @@ const createBudget = (varName, options = {}) => {
   } else log("The variable \"" + varName + "\" is not available. Please choose a different variable name.", "error");
 };
 
+const cloneLine = (line) => {
+  const clone = (typeof line === "string") ? JSON.parse(line) : line;
+  const newLine = new Line();
+  if (clone.children && clone.children.length) {
+    for (let i = 0; i < clone.children.length; i++) {
+      const cloneChild = clone.children[i];
+      newLine.addLine(cloneLine(cloneChild));
+    }
+  }
+  for (let property in clone) {
+    if (clone.hasOwnProperty(property) && clone[property]) {
+      if ([
+        "created", "title", "unitNumber", "unitType", "unitCost",
+        "frequency"
+      ].includes(property)) {
+        newLine[property] = clone[property];
+      } else if ([
+        "_modified", "_currency", "_start", "_end"
+      ].includes(property)) {
+        newLine[property.replace("_", "")] = clone[property];
+      }
+    }
+  }
+  return newLine;
+}
 
 /* ----- Line code ----- */
 
 class Line {
 
   constructor (options = {}) {
-    this.created = this.modified = new Date().getTime();
+    this.created = this.created || new Date().getTime();
+    this.modified = this.modified || this.created;
     for (var v in options) {
       if (options.hasOwnProperty(v) && v !== 'children') this[v] = options[v];
     }
@@ -237,7 +263,7 @@ class Line {
     let buttonAdd = n("span.button.add",
       n("span", "Add Subline"),
       {click: function () {
-          this.add();  
+          this.add();
         }.bind(this)
       }
     );
@@ -245,18 +271,20 @@ class Line {
     this.viewProps = {
       index: n('span.col1.index', this.index),
       title: n('span.col2.title.editable', this.title),
-      unitType: n('span.col3.unittype.editable', this.unitType),
-      unitCost: n('span.col4.unitcost.alignright.editable', formatN(this.unitCost)),
-      frequency: n('span.col5.frequency.alignright.editable', this.frequency),
-      cost: n('span.col6.cost.alignright.editable', formatN(this.cost)),
-      total: n('span.col7.total.alignright', formatN(this.total)),
-      currency: n('span.col8.currency.editable', this.currency),
-      tools: n('span.col9.tools', [buttonDelete, buttonAdd])
+      unitNumber: n('span.col3.unitnumber.editable', this.unitNumber),
+      unitType: n('span.col4.unittype.editable', this.unitType),
+      unitCost: n('span.col5.unitcost.alignright.editable', formatN(this.unitCost)),
+      frequency: n('span.col6.frequency.alignright.editable', this.frequency),
+      cost: n('span.col7.cost.alignright.editable', formatN(this.cost)),
+      total: n('span.col8.total.alignright', formatN(this.total)),
+      currency: n('span.col9.currency.editable', this.currency),
+      tools: n('span.col10.tools', [buttonDelete, buttonAdd])
     };
-    
+
     const viewProps = n("div.props", [
       this.viewProps.index,
       this.viewProps.title,
+      this.viewProps.unitNumber,
       this.viewProps.unitType,
       this.viewProps.unitCost,
       this.viewProps.frequency,
@@ -266,11 +294,11 @@ class Line {
       this.viewProps.tools
     ]);
     this.viewChildren = n("ul");
-    
+
     for (var property in this.viewProps) {
       this.viewProps[property].setAttribute('data-property', property)
     }
-    
+
     this.view = n('li.line', [
       viewProps,
       this.viewChildren
@@ -377,14 +405,14 @@ class Line {
     return root;
   }
 
-  get parents () {
-    let parents = [];
+  get ancestors () {
+    let ancestors = [];
     let current = this;
     while (current.parent) {
-      parents.push(current.parent);
+      ancestors.push(current.parent);
       current = current.parent;
     }
-    return parents;
+    return ancestors;
   }
 
   get siblings () {
@@ -432,9 +460,7 @@ class Line {
   }
 
   get cost () {
-    if (this.unit && this.frequency && this.unitCost) {
-      return this.unit * this.frequency * this.unitCost;
-    } else return 0;
+    return this.unitNumber * this.unitCost * this.frequency;
   }
 
   get total () {
@@ -471,49 +497,71 @@ class Line {
 
   /* --- View --- */
 
-  viewAdd (newLine) {
-    this.viewChildren.appendChild(newLine.view);    
+  viewAdd (newLine, index) {
+    this.viewChildren.appendChild(newLine.view);
     newLine.viewUpdate();
-    newLine.parent.viewUpdate(false, "up");
+    newLine.parent.viewUpdate("up");
   }
 
   viewRemove () {
     this.view.remove();
-    this.parent.viewUpdate(false, "up");
+    this.parent.viewUpdate("updown");
   }
 
-  viewUpdate (options, recursive) {
-    switch (recursive) {
-      case "down":
+  viewUpdate (recursion, properties) {
+    switch (recursion) {
+      case "down": // downward recursion (all children and all their descendats...)
+        this.viewUpdate(false, properties);
         if (this.children) {
           for (let i = 0; i < this.children.length; i++) {
-            this.children[i].viewUpdate(options, "down");
+            this.children[i].viewUpdate("down", properties);
           }
         }
         break;
-      case "up":
-        this.viewUpdate(options);
-        if (this.parent) this.parent.viewUpdate(false, "up")
+      case "up": // upward recursion (parent and all of its ancestors)
+        this.viewUpdate(false, properties);
+        if (this.parent) this.parent.viewUpdate("up")
         break;
-      case "both":
-        this.viewUpdate(options, "down");
-        this.viewUpdate(options, "up");
+      case "updown":
+        this.viewUpdate("down", properties);
+        this.viewUpdate("up", properties);
         break;
-      default:
-        if (options) {
-          for (let property in options) {
-            if (options.hasOwnProperty(property) && this.viewProps[property]) {
-              this.viewProps[property].textContent = options[property];
-              if (property == "unitCost") {
-                this.viewUpdate({cost: this.cost, total: this.total});
+      case "side":
+        this.viewUpdate(false, properties);
+        console.log(this.siblings)
+        for (var i = 0; i < this.siblings.length; i++) {
+          this.siblings[i].viewUpdate("down", properties);
+        }
+      default: // if no recursive option specified or it's "false"
+        if (properties) {
+          for (let i = 0; i < properties.length; i++) {
+            const property = properties[i];
+            if (this.viewProps[property]) {
+              let newValue = (
+                property == "unitCost" ||
+                property == "cost" ||
+                property == "total"
+              ) ? formatN(this[property]) : this[property];
+              this.viewProps[property].textContent = newValue;
+              if (
+                property == "unitCost" ||
+                property == "unitNumber" ||
+                property == "frequency"
+              ) {
+                this.viewUpdate(false, ["cost", "total"]);
               }
             }
           }
         } else {
           for (let property in this.viewProps) {
             if (property !== "tools" && this.viewProps.hasOwnProperty(property)) {
-              let newValue = property == "total" ? formatN(this[property]) : this[property];
+              let newValue = (
+                property == "unitCost" ||
+                property == "cost" ||
+                property == "total"
+              ) ? formatN(this[property]) : this[property];
               this.viewProps[property].textContent = newValue;
+              //console.log(property + " - " + newValue);
             }
           }
         }
@@ -521,33 +569,50 @@ class Line {
         exportJSON(budget, "exportoutput"); // for debugging
         break;
     }
+
+    // Hide some things for the fields that have no children (leafs) because these get zeroed anyway
     const leafFields = [
+      this.viewProps.unitNumber,
       this.viewProps.unitType,
       this.viewProps.unitCost,
       this.viewProps.frequency,
       this.viewProps.cost
     ];
     for (let i = 0; i < leafFields.length; i++) {
-      if (this.children) leafFields[i].classList.add("invisible");
+      if (this.children && this.children.length) leafFields[i].classList.add("invisible");
       else leafFields[i].classList.remove("invisible");
     }
   }
 
   viewUpdateGrandTotal () {
-    const grandTotal = this.root.viewGrandTotal.querySelector(".amount");
-    const currency = this.root.viewGrandTotal.querySelector(".currency");
-    grandTotal.textContent = this.root.total;
-    currency.textContent = this.root.currency;
+    if (this.root.viewGrandTotal) {
+      const grandTotal = this.root.viewGrandTotal.querySelector(".amount");
+      const currency = this.root.viewGrandTotal.querySelector(".currency");
+      grandTotal.textContent = formatN(this.root.total);
+      currency.textContent = this.root.currency;
+    }
   }
 
   appendToBody () {
     if (!this.root.appendedToBody) {
-      this.root.viewGrandTotal = n("div.grandtotal", [
+      const header = n("header", [
+        n("span.col1", "Index"),
+        n("span.col2", "Title"),
+        n("span.col3", "Unit Number"),
+        n("span.col4", "Unit Type"),
+        n("span.col5", "Unit Cost"),
+        n("span.col6", "Frequency"),
+        n("span.col7", "Cost"),
+        n("span.col8", "Total"),
+        n("span.col9", "Currency")
+      ]);
+      this.root.viewGrandTotal = n("footer.grandtotal", [
         n("strong.title.alignright", "Grand Total"),
         n("strong.amount.alignright", this.root.total),
         n("strong.currency", this.root.currency)
       ]);
       document.body.appendChild(n("div.budget", [
+        header,
         n("ul.root", this.root.view),
         this.root.viewGrandTotal
       ]))
@@ -555,41 +620,58 @@ class Line {
     } else log("The root of this budget has already been added to the page.", "error");
   }
 
-  
+
   /* --- Methods --- */
 
   add (options = {}, index) {
+
     let newParent = this;
 
     // let the child inherit the parent's cost data if any
-    options.unit = options.unit || newParent.unit || 1;
-    options.frequency = options.frequency || newParent.frequency || 1;
+    options.unitNumber = options.unitNumber || newParent.unitNumber || 1;
+    options.unitType = options.unitType || newParent.unitType || "ls";
     options.unitCost = options.unitCost || newParent.unitCost || 0;
+    options.frequency = options.frequency || newParent.frequency || 1;
+    options.currency = options.currency || newParent.currency || this.root.currency;
 
     // a parent doesn't need these:
-    delete this.unit;
-    delete this.frequency;
-    delete this.unitCost;
+    this.unitNumber = 0;
+    this.unitType = "";
+    this.unitCost = 0;
+    this.frequency = 0;
 
-    let newLine = new Line(options);
     if (index) {
-      if (typeof index === 'string') {
-        let map = index.split('.');
+      if (typeof index === "string") {
+        let map = index.split(".");
         index = Number(map.pop());
-        newParent = this.getLine(map.join('.'));
+        newParent = this.getLine(map.join("."));
       }
     }
-    Object.defineProperty(newLine, 'parent', {
-      get: function () { return newParent; }
-    });
+
+    const newLine = new Line(options);
+
+    Object.defineProperty(newLine, "parent", { get: () => newParent });
     if (newParent.children) {
       if (index && index < newParent.children.length) {
         newParent.children.splice(index - 1, 0, newLine);
       } else this.children.push(newLine);
     } else newParent.children = [newLine];
-    if (!quietMode) log('New line added ' + newLine.index);
 
     newParent.viewAdd(newLine);
+    if (!quietMode) log("New line added at " + newLine.index);
+  }
+
+  addLine (newLine, index) {
+    if (newLine instanceof Line) {
+      let newParent = this;
+      Object.defineProperty(newLine, "parent", { get: () => newParent });
+      if (newParent.children) {
+        if (index && index < this.children.length) {
+          newParent.children.splice(index - 1, 0, newLine);
+        } else this.children.push(newLine);
+      } else newParent.children = [newLine];
+      newParent.viewAdd(newLine, index);
+    } else log(newLine.toString() + " is not a Line object", "error");
   }
 
   remove (quietMode) {
@@ -603,14 +685,14 @@ class Line {
   }
 
   move (newIndex, addAsChild) {
-    let oldIndex = this.index;
-    let map = addAsChild ? [] : newIndex.toString().split('.');
-    let parentIndex = addAsChild ? newIndex : map.slice(0, -1).join('.');
-    let newParent = this.root.getLine(parentIndex);
+    const oldIndex = this.index;
+    const indexMap = addAsChild ? [] : newIndex.toString().split('.');
+    const parentIndex = addAsChild ? newIndex : indexMap.slice(0, -1).join('.');
+    const newParent = this.root.getLine(parentIndex);
     if (newParent) {
-      let clip = JSON.parse(JSON.stringify(this));
-      this.remove(true);
-      newParent.add(clip, map[map.length - 1]);
+      newParent.addLine(cloneLine(JSON.stringify(this)));
+      this.remove();
+      newParent.viewUpdate("down");
       log('Line ' + oldIndex + ' moved to line ' + newIndex, 'info');
     } else log("There is no line at the index" + parentIndex, "error");
   }
@@ -714,9 +796,9 @@ class Line {
         this[variable] = options[variable];
       }
     }
-    this.viewUpdate(options, "up");
+    this.viewUpdate("up", Object.keys(options));
   }
-  
+
 }
 
 loadRates();

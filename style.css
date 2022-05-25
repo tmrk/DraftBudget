@@ -26,9 +26,21 @@ body {
 }
 
 .budget {
-  width: 84ch;
+  width: 99ch;
   margin: 20px auto;
-  display: inline-block;
+  display: block;
+  --borderradius: 15px;
+  border-radius: var(--borderradius);
+}
+
+.budget > header {
+  border-top-left-radius: var(--borderradius);
+  border-top-right-radius: var(--borderradius);
+}
+
+.budget > footer {
+  border-bottom-left-radius: var(--borderradius);
+  border-bottom-right-radius: var(--borderradius);
 }
 
 ul.root > li > .props {
@@ -40,57 +52,67 @@ li.line {
   background: rgba(255,255,255,0.1);
 }
 
-.props {
+.budget > header {
+  background: rgba(255,255,255,0.15);
+}
+
+.props,
+.budget > header {
   padding: 0 0 0 2ch;
 }
 
-.props > span {
+.budget span[class^="col"] {
   padding-right: 1ch;
   display: inline-block;
   overflow: hidden;
 }
 
-.props > .col1 { width: 8ch; }
-.props > .col2 { width: 14ch; }
-.props > .col3 { width: 3ch; }
-.props > .col4 { width: 5ch; }
-.props > .col5 { width: 2ch; }
-.props > .col6 { width: 5ch; }
-.props > .col7 { width: 10ch; }
-.props > .col8 { width: 3ch; }
-.props > .col9 { width: 23ch; }
+.budget header > span {
+  text-align: center;
+}
 
-.props > .col9 > span::before {
+.budget .col1 { width: 8ch; }
+.budget .col2 { width: 14ch; }
+.budget .col3 { width: 4ch; }
+.budget .col4 { width: 3ch; }
+.budget .col5 { width: 10ch; }
+.budget .col6 { width: 2ch; }
+.budget .col7 { width: 10ch; }
+.budget .col8 { width: 10ch; }
+.budget .col9 { width: 3ch; }
+.budget .col10 { width: 23ch; }
+
+.props > .col10 > span::before {
   content: "| "
 }
 
-.props > .col9 > span { 
-  padding-right: 1ch; 
+.props > .col10 > span {
+  padding-right: 1ch;
   font-weight: bold;
   cursor: pointer;
 }
 
-.props > .col9 > span:hover {
+.props > .col10 > span:hover {
   color: green;
 }
 
-div.grandtotal {
+.grandtotal {
   padding: 1ch 0;
   background: rgba(255,255,255,0.1);
 }
 
-div.grandtotal .title {
-  width: 44ch;
+.grandtotal .title {
+  width: 59ch;
   display: inline-block;
 }
 
-div.grandtotal .amount {
+.grandtotal .amount {
   width: 10ch;
   padding-left: 1ch;
   display: inline-block;
 }
 
-div.grandtotal .currency {
+.grandtotal .currency {
   width: 3ch;
   padding-left: 1ch;
 }
