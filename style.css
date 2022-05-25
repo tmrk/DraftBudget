@@ -10,6 +10,10 @@
   display: none!important;
 }
 
+.invisible {
+  visibility: hidden;
+}
+
 .alignright {
   text-align: right;
 }
@@ -21,8 +25,23 @@ body {
   color: rgba(255,255,255,0.9);
 }
 
+.budget {
+  width: 84ch;
+  margin: 20px auto;
+  display: inline-block;
+}
+
+ul.root > li > .props {
+  padding-top: 1ch;
+  padding-bottom: 1ch;
+}
+
 li.line {
   background: rgba(255,255,255,0.1);
+}
+
+.props {
+  padding: 0 0 0 2ch;
 }
 
 .props > span {
@@ -53,6 +72,27 @@ li.line {
 
 .props > .col9 > span:hover {
   color: green;
+}
+
+div.grandtotal {
+  padding: 1ch 0;
+  background: rgba(255,255,255,0.1);
+}
+
+div.grandtotal .title {
+  width: 44ch;
+  display: inline-block;
+}
+
+div.grandtotal .amount {
+  width: 10ch;
+  padding-left: 1ch;
+  display: inline-block;
+}
+
+div.grandtotal .currency {
+  width: 3ch;
+  padding-left: 1ch;
 }
 
 #export {

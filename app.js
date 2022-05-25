@@ -2,8 +2,6 @@
 
 /* ----- Variables ----- */
 
-const D = document;
-const B = document.body;
 let config = {
   roundDecimals: 2,
   showDecimals: 2,
@@ -31,8 +29,6 @@ let config = {
   }
 }
 let syslog = JSON.parse(localStorage.getItem('syslog')) || [];
-let budget;
-let b;
 let quietMode;
 let symbols = {};
 let rates = {};
@@ -173,37 +169,47 @@ const start = function () {
     n("pre#exportoutput.hidden")
   ]);
 
-  document.body.appendChild(viewExport);
-
-  addMockData();
+  //document.body.appendChild(viewExport);
+  createBudget("budget")
+  addMockData(budget);
 }
 
-const addMockData = function () {
-  quietMode = true;
-  b = budget;
-  b.add({currency: 'CHF'})
-  b.add({currency: 'EUR'})
-  b.getLine(1).add()
-  b.getLine(1).add({currency: 'CAD'})
-  b.getLine(1).getLine(2).add({
-    unitCost: 2500,
-    start: new Date('2020-01-02').getTime(),
-    end: new Date('2024-12-31').getTime()
-  })
-  b.getLine(1).getLine(2).add();
-  b.getLine(2).add();
-  b.getLine(2).getLine(1).add({unitCost: 333, currency: 'GBP'});
-  b.getLine(2).getLine(1).add({unitCost: 444, currency: 'MXN'});
-  b.getLine(2).getLine(1).add({unitCost: 555, currency: 'HKD'});
-  quietMode = false;
-  console.log(budget);
+const addMockData = function (b) {
+  if (b && b instanceof Line) {
+    quietMode = true;
+    b.add({currency: 'CHF'})
+    b.add({currency: 'EUR'})
+    b.getLine(1).add()
+    b.getLine(1).add({currency: 'CAD'})
+    b.getLine(1).getLine(2).add({
+      unitCost: 2500,
+      start: new Date('2020-01-02').getTime(),
+      end: new Date('2024-12-31').getTime()
+    })
+    b.getLine(1).getLine(2).add();
+    b.getLine(2).add();
+    b.getLine(2).getLine(1).add({unitCost: 333, currency: 'GBP'});
+    b.getLine(2).getLine(1).add({unitCost: 444, currency: 'MXN'});
+    b.getLine(2).getLine(1).add({unitCost: 555, currency: 'HKD'});
+    b.viewUpdate(false, "down");
+    quietMode = false;
+    console.log(budget);
+  }
 }
 
 const exportJSON = (data, targetID) => {
   const dataString = JSON.stringify(data, 2, 2);
   const target = document.getElementById(targetID);
-  target.textContent = dataString;
-}
+  if (target) target.textContent = dataString;
+};
+
+const createBudget = (varName, options = {}) => {
+  log(varName);
+  if (!window[varName]) {
+    window[varName] = new Line(options);
+    window[varName].appendToBody();
+  } else log("The variable \"" + varName + "\" is not available. Please choose a different variable name.", "error");
+};
 
 
 /* ----- Line code ----- */
@@ -219,6 +225,23 @@ class Line {
     if (!this._start) this.start = new Date().getTime();
     if (!this._end) this.end = this._start + 86400000;
 
+
+    let buttonDelete = n('span.button.delete',
+      n('span', 'Delete'),
+      {click: function () {
+          this.remove();
+        }.bind(this)
+      }
+    );
+
+    let buttonAdd = n("span.button.add",
+      n("span", "Add Subline"),
+      {click: function () {
+          this.add();  
+        }.bind(this)
+      }
+    );
+
     this.viewProps = {
       index: n('span.col1.index', this.index),
       title: n('span.col2.title.editable', this.title),
@@ -228,8 +251,9 @@ class Line {
       cost: n('span.col6.cost.alignright.editable', formatN(this.cost)),
       total: n('span.col7.total.alignright', formatN(this.total)),
       currency: n('span.col8.currency.editable', this.currency),
-      tools: n('span.col9.tools')
+      tools: n('span.col9.tools', [buttonDelete, buttonAdd])
     };
+    
     const viewProps = n("div.props", [
       this.viewProps.index,
       this.viewProps.title,
@@ -450,57 +474,88 @@ class Line {
   viewAdd (newLine) {
     this.viewChildren.appendChild(newLine.view);    
     newLine.viewUpdate();
-    newLine.parent.viewUpdate();
+    newLine.parent.viewUpdate(false, "up");
   }
 
   viewRemove () {
     this.view.remove();
+    this.parent.viewUpdate(false, "up");
   }
 
   viewUpdate (options, recursive) {
-    if (recursive && this.children) {
-      for (let i = 0; i < this.children.length; i++) {
-        this.children[i].viewUpdate(options, true);
-      }
-    }
-    if (options) {
-      for (let v in options) {
-        if (options.hasOwnProperty(v) && this.viewProps[v]) {
-          this.viewProps[v].textContent = options[v];
+    switch (recursive) {
+      case "down":
+        if (this.children) {
+          for (let i = 0; i < this.children.length; i++) {
+            this.children[i].viewUpdate(options, "down");
+          }
         }
+        break;
+      case "up":
+        this.viewUpdate(options);
+        if (this.parent) this.parent.viewUpdate(false, "up")
+        break;
+      case "both":
+        this.viewUpdate(options, "down");
+        this.viewUpdate(options, "up");
+        break;
+      default:
+        if (options) {
+          for (let property in options) {
+            if (options.hasOwnProperty(property) && this.viewProps[property]) {
+              this.viewProps[property].textContent = options[property];
+              if (property == "unitCost") {
+                this.viewUpdate({cost: this.cost, total: this.total});
+              }
+            }
+          }
+        } else {
+          for (let property in this.viewProps) {
+            if (property !== "tools" && this.viewProps.hasOwnProperty(property)) {
+              let newValue = property == "total" ? formatN(this[property]) : this[property];
+              this.viewProps[property].textContent = newValue;
+            }
+          }
+        }
+        this.viewUpdateGrandTotal();
+        exportJSON(budget, "exportoutput"); // for debugging
+        break;
+    }
+    const leafFields = [
+      this.viewProps.unitType,
+      this.viewProps.unitCost,
+      this.viewProps.frequency,
+      this.viewProps.cost
+    ];
+    if (this.children) {
+      for (let i = 0; i < leafFields.length; i++) {
+        leafFields[i].classList.add("invisible");
       }
     } else {
-      for (let property in this.viewProps) {
-        if (this.viewProps.hasOwnProperty(property)) {
-          this.viewProps[property].textContent = this[property];
-        }
+      for (let i = 0; i < leafFields.length; i++) {
+        leafFields[i].classList.remove("invisible");
       }
     }
+  }
 
-    const buttonDelete = n('span.button.delete',
-      n('span', 'Delete'),
-      {click: function () {
-          this.remove();
-        }.bind(this)
-      }
-    );
-
-    const buttonAdd = n("span.button.add",
-      n("span", "Add Subline"),
-      {click: function () {
-          this.add();  
-        }.bind(this)
-      }
-    );
-
-    this.viewProps.tools.append(buttonDelete, buttonAdd);
-    exportJSON(budget, "exportoutput"); // for debugging
-
+  viewUpdateGrandTotal () {
+    const grandTotal = this.root.viewGrandTotal.querySelector(".amount");
+    const currency = this.root.viewGrandTotal.querySelector(".currency");
+    grandTotal.textContent = this.root.total;
+    currency.textContent = this.root.currency;
   }
 
   appendToBody () {
     if (!this.root.appendedToBody) {
-      document.body.appendChild(n("ul", this.root.view));
+      this.root.viewGrandTotal = n("div.grandtotal", [
+        n("strong.title.alignright", "Grand Total"),
+        n("strong.amount.alignright", this.root.total),
+        n("strong.currency", this.root.currency)
+      ]);
+      document.body.appendChild(n("div.budget", [
+        n("ul.root", this.root.view),
+        this.root.viewGrandTotal
+      ]))
       this.root.appendedToBody = true;
     } else log("The root of this budget has already been added to the page.", "error");
   }
@@ -543,12 +598,10 @@ class Line {
   }
 
   remove (quietMode) {
-    this.viewRemove();
-    const parent = this.parent;
     let index = this.index;
     let lineNumber = this.lineNumber;
     this.parent.children.splice(lineNumber - 1, 1);
-    this.parent.viewUpdate(false, true);
+    this.viewRemove();
     if (!quietMode) {
       log('Line ' + index + ' deleted', 'info');
     }
@@ -561,10 +614,10 @@ class Line {
     let newParent = this.root.getLine(parentIndex);
     if (newParent) {
       let clip = JSON.parse(JSON.stringify(this));
-      this.removeLine(true);
+      this.remove(true);
       newParent.add(clip, map[map.length - 1]);
       log('Line ' + oldIndex + ' moved to line ' + newIndex, 'info');
-    }
+    } else log("There is no line at the index" + parentIndex, "error");
   }
 
   recurse (line, callback) {
@@ -633,15 +686,6 @@ class Line {
     } else return;
   }
 
-  update (options) {
-    if (!options || !options.modified) this.modified = new Date().getTime();
-    for (var key in options) {
-      if (options.hasOwnProperty(key)) {
-        this[key] = options[key];
-      }
-    }
-  }
-
   addCategory (category) {
     if (this._category && Array.isArray(category)) {
       for (var i = 0; i < category.length; i++) {
@@ -675,13 +719,13 @@ class Line {
         this[variable] = options[variable];
       }
     }
+    this.viewUpdate(options, "up");
   }
   
 }
 
-budget = new Line();
-budget.appendToBody();
-
 loadRates();
 
 start();
+
+const b = budget;
