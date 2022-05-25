@@ -527,14 +527,9 @@ class Line {
       this.viewProps.frequency,
       this.viewProps.cost
     ];
-    if (this.children) {
-      for (let i = 0; i < leafFields.length; i++) {
-        leafFields[i].classList.add("invisible");
-      }
-    } else {
-      for (let i = 0; i < leafFields.length; i++) {
-        leafFields[i].classList.remove("invisible");
-      }
+    for (let i = 0; i < leafFields.length; i++) {
+      if (this.children) leafFields[i].classList.add("invisible");
+      else leafFields[i].classList.remove("invisible");
     }
   }
 
