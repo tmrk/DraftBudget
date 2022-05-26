@@ -141,3 +141,19 @@ pre {
   text-align: left;
   overflow-x: auto;
 }
+
+body > header {
+  height: 100px;
+  display: flex;
+  gap: 40px;
+  align-items: center;
+  justify-content: center;
+}
+
+body > header strong {
+  cursor: pointer;
+}
+
+body > header strong:hover {
+  color: red;
+}

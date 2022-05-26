@@ -59,24 +59,6 @@ const n = (tag, content, listener) => {
   return el;
 }
 
-const fetch = function (base) {
-  let request = new XMLHttpRequest();
-  let requestURL = base ?
-    'https://api.exchangerate.host/latest?base=' + base :
-    'https://api.exchangerate.host/symbols';
-  request.open('GET', requestURL);
-  request.responseType = 'json';
-  request.send();
-  request.onload = function() {
-    if (base) {
-      rates[base] = request.response.rates;
-    } else {
-      symbols = request.response.symbols;
-      for (var code in symbols) if (symbols.hasOwnProperty(code)) fetch(code);
-    }
-  }
-}
-
 const convert = function (amount, from, to) {
   from = from.toUpperCase() || config.default.currency.toUpperCase();
   to = to.toUpperCase() || config.default.currency.toUpperCase();
@@ -123,6 +105,35 @@ const log = function (message, type, timestamp) {
   console[type](message);
 }
 
+const saveRatesToLocalStorage = () => {
+  localStorage.setItem("rates", JSON.stringify(rates));
+  localStorage.setItem("symbols", JSON.stringify(symbols));
+  localStorage.setItem(
+    "ratesUpdated", new Date().toISOString().split('T')[0]
+  );
+  log("Exchange rates updated ("
+  + localStorage.getItem("ratesUpdated") + ")");
+};
+
+const fetchData = async base => {
+  const requestURL = base ?
+    "https://api.exchangerate.host/latest?base=" + base :
+    "https://api.exchangerate.host/symbols";
+  await fetch(requestURL)
+    .then(response => response.json())
+    .then(response => {
+      if (base) {
+        rates[base] = response.rates;
+      } else {
+        symbols = response.symbols;
+        for (var code in symbols) fetchData(code);
+      }
+    })
+    .then(response => {
+      saveRatesToLocalStorage();
+    });
+}
+
 const loadRates = function (forceRefresh) {
   // Only fetch new rates if they're outdated or if a refresh is forced
   if (!localStorage.getItem('rates') ||
@@ -134,16 +145,7 @@ const loadRates = function (forceRefresh) {
           + localStorage.getItem('ratesUpdated') + ')');
         } else {
           log('Accessing online exchange rates...');
-          fetch();
-          setTimeout(function () {
-            localStorage.setItem('rates', JSON.stringify(rates));
-            localStorage.setItem('symbols', JSON.stringify(symbols));
-            localStorage.setItem(
-              'ratesUpdated', new Date().toISOString().split('T')[0]
-            );
-            log('Exchange rates updated ('
-            + localStorage.getItem('ratesUpdated') + ')');
-          }, 1500); // just a temp fix, should instead wait for fetch to finish
+          fetchData();
         }
   } else {
     rates = JSON.parse(localStorage.getItem('rates'));
@@ -168,6 +170,21 @@ const start = function () {
     }}),
     n("pre#exportoutput.hidden")
   ]);
+
+  document.body.appendChild(n("header", [
+    n("span", "Debug:"),
+    n("strong", "Clear localStorage", {
+      click: function () {
+        localStorage.clear();
+        log("Local Storage cleared.", "info")
+      }
+    }),
+    n("strong", "Save rates and symbols to localStorage", {
+      click: function () {
+        saveRatesToLocalStorage();
+      }
+    })
+  ]));
 
   //document.body.appendChild(viewExport);
   createBudget("budget")
