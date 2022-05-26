@@ -44,8 +44,7 @@ body {
 }
 
 ul.root > li > .props {
-  padding-top: 1ch;
-  padding-bottom: 1ch;
+
 }
 
 li.line {
@@ -61,7 +60,10 @@ li.line {
   padding: 0 0 0 2ch;
 }
 
-.budget span[class^="col"] {
+.budget *[class^="col"] {
+  height: 100%;
+  padding-top: 0.5ch;
+  padding-bottom: 0.5ch;
   padding-right: 1ch;
   display: inline-block;
   overflow: hidden;
@@ -94,6 +96,27 @@ li.line {
 
 .props > .col10 > span:hover {
   color: green;
+}
+
+.props > .editable {
+  cursor: pointer;
+}
+
+.props > .editable:hover {
+  background: rgba(255,255,255,0.5);
+}
+
+
+.props > .editable.editing {
+  cursor: text;
+}
+
+.props > .editable.editing:hover {
+  background: none;
+}
+
+.props > div.editing > span {
+  display: none;
 }
 
 .grandtotal {
@@ -142,7 +165,8 @@ pre {
   overflow-x: auto;
 }
 
-body > header {
+body > header,
+body > footer {
   height: 100px;
   display: flex;
   gap: 40px;
@@ -156,4 +180,10 @@ body > header strong {
 
 body > header strong:hover {
   color: red;
+}
+
+body > footer {
+  text-align: center;
+  font-style: italic;
+  color: rgba(255,255,255,0.6);
 }

@@ -189,6 +189,10 @@ const start = function () {
   //document.body.appendChild(viewExport);
   createBudget("budget")
   addMockData(budget);
+
+  document.body.appendChild(n("footer", [
+    n("p", "Refresh the page if the above table is empty!</br>(The exchange rate loader script is not working properly yet.)")
+  ]));
 }
 
 const addMockData = function (b) {
@@ -240,12 +244,12 @@ const cloneLine = (line) => {
   for (let property in clone) {
     if (clone.hasOwnProperty(property) && clone[property]) {
       if ([
-        "created", "title", "unitNumber", "unitType", "unitCost",
-        "frequency"
+        "created"
       ].includes(property)) {
         newLine[property] = clone[property];
       } else if ([
-        "_modified", "_currency", "_start", "_end"
+        "_modified", "_currency", "_start", "_end",  "_title", "_unitNumber",
+        "_unitType", "_unitCost", "_frequency"
       ].includes(property)) {
         newLine[property.replace("_", "")] = clone[property];
       }
@@ -259,6 +263,33 @@ const cloneLine = (line) => {
 class Line {
 
   constructor (options = {}) {
+    let buttonDelete = n('span.button.delete',
+      n('span', 'Delete'),
+      {click: function () {
+          this.remove();
+        }.bind(this)
+      }
+    );
+    let buttonAdd = n("span.button.add",
+      n("span", "Add Subline"),
+      {click: function () {
+          this.add();
+        }.bind(this)
+      }
+    );
+    this.viewProps = {
+      index: n('div.col1.index', n("span", this.index)),
+      title: n('div.col2.title.editable', n("span", this.title)),
+      unitNumber: n('div.col3.unitnumber.editable', n("span", this.unitNumber)),
+      unitType: n('div.col4.unittype.editable', n("span", this.unitType)),
+      unitCost: n('div.col5.unitcost.alignright.editable', n("span", formatN(this.unitCost))),
+      frequency: n('div.col6.frequency.alignright.editable', n("span", this.frequency)),
+      cost: n('div.col7.cost.alignright', n("span", formatN(this.cost))),
+      total: n('div.col8.total.alignright', n("span", formatN(this.total))),
+      currency: n('div.col9.currency.editable', n("span", this.currency)),
+      tools: n('div.col10.tools', [ buttonDelete, buttonAdd ])
+    };
+
     this.created = this.created || new Date().getTime();
     this.modified = this.modified || this.created;
     for (var v in options) {
@@ -267,36 +298,6 @@ class Line {
     this.currency = this.currency || config.default.currency;
     if (!this._start) this.start = new Date().getTime();
     if (!this._end) this.end = this._start + 86400000;
-
-
-    let buttonDelete = n('span.button.delete',
-      n('span', 'Delete'),
-      {click: function () {
-          this.remove();
-        }.bind(this)
-      }
-    );
-
-    let buttonAdd = n("span.button.add",
-      n("span", "Add Subline"),
-      {click: function () {
-          this.add();
-        }.bind(this)
-      }
-    );
-
-    this.viewProps = {
-      index: n('span.col1.index', this.index),
-      title: n('span.col2.title.editable', this.title),
-      unitNumber: n('span.col3.unitnumber.editable', this.unitNumber),
-      unitType: n('span.col4.unittype.editable', this.unitType),
-      unitCost: n('span.col5.unitcost.alignright.editable', formatN(this.unitCost)),
-      frequency: n('span.col6.frequency.alignright.editable', this.frequency),
-      cost: n('span.col7.cost.alignright.editable', formatN(this.cost)),
-      total: n('span.col8.total.alignright', formatN(this.total)),
-      currency: n('span.col9.currency.editable', this.currency),
-      tools: n('span.col10.tools', [buttonDelete, buttonAdd])
-    };
 
     const viewProps = n("div.props", [
       this.viewProps.index,
@@ -313,10 +314,62 @@ class Line {
     this.viewChildren = n("ul");
 
     for (var property in this.viewProps) {
-      this.viewProps[property].setAttribute('data-property', property)
+      const propNode = this.viewProps[property];
+      propNode.setAttribute("data-property", property);
+      if (propNode.classList.contains("editable")) {
+
+        /* Clicking on line properties to edit them */
+        propNode.addEventListener("click", function () {
+          if (!propNode.getElementsByTagName("input").length) {
+            const previousEditing = this.root.view.querySelector(".editing input");
+            const pressEnter = new KeyboardEvent("keydown", { key: "Enter" });
+            if (previousEditing) previousEditing.dispatchEvent(pressEnter);
+            propNode.classList.add("editing");
+            const property = propNode.dataset.property; // need to reset this
+            const originalValue = this[property];
+            const inputUnfocused = (cancel) => {
+              this[property] = cancel ? originalValue : event.target.value;
+              event.target.remove();
+              propNode.classList.remove("editing");
+              log("Editing " + this.index + " " + property +  " finished, changes " +
+                (cancel ? "discarded." : "saved."), "info");
+            };
+            const inputEdit = n("input|value=" + originalValue, "", {
+              input: function (event) {
+                this[property] = event.target.value;
+              }.bind(this),
+              keydown: function (event) {
+                switch (event.key) {
+                  case "Tab":
+                    event.preventDefault();
+                    const editables = this.root.view.querySelectorAll(".editable:not(.invisible)");
+                    const thisIndex = Array.from(editables).indexOf(propNode);
+                    const nextIndex = (editables.length - 1) !== thisIndex ?
+                                      thisIndex + 1 : 0;
+                    inputUnfocused();
+                    editables[nextIndex].click(); // simulating a click is the easiest at this point and it does the job
+                    break;
+                  case "Enter":
+                    event.preventDefault();
+                    inputUnfocused();
+                    break;
+                  case "Escape":
+                    event.preventDefault();
+                    inputUnfocused(true);
+                    break;
+                  default:
+                }
+              }.bind(this)
+            });
+            propNode.appendChild(inputEdit);
+            inputEdit.focus();
+            log("Editing " + this.index + " " + property);
+          }
+        }.bind(this));
+      }
     }
 
-    this.view = n('li.line', [
+    this.view = n("li.line", [
       viewProps,
       this.viewChildren
     ]);
@@ -328,10 +381,6 @@ class Line {
     this._modified = date;
   }
 
-  set title (title) {
-    this._title = title;
-  }
-
   set start (date) {
     this._start = date;
   }
@@ -341,11 +390,38 @@ class Line {
   }
 
   set title (title) {
-    this._title = title;
+    if (title && title.trim() && title !== this.title) this._title = title;
+    this.viewUpdate(false, [ "title" ]);
+  }
+
+  set unitNumber (unitNumber) {
+    this._unitNumber = unitNumber;
+    this.viewUpdate(false, [ "unitNumber", "cost" ]);
+    this.viewUpdate("up", [ "total" ]);
+  }
+
+  set unitType (unitType) {
+    this._unitType = unitType;
+    if (unitType == "ls" || unitType == "lumpsum") this.unitNumber = 1;
+    this.viewUpdate(false, [ "unitType" ]);
+  }
+
+  set unitCost (unitCost) {
+    this._unitCost = unitCost;
+    this.viewUpdate(false, [ "unitCost", "cost" ]);
+    this.viewUpdate("up", [ "total" ]);
+  }
+
+  set frequency (frequency) {
+    this._frequency = frequency;
+    this.viewUpdate(false, [ "frequency" ]);
+    this.viewUpdate("up", [ "total" ]);
   }
 
   set currency (currency) {
     this._currency = currency;
+    this.viewUpdate(false, [ "currency" ]);
+    this.viewUpdate("up", [ "total" ]);
   }
 
   set category (category) {
@@ -374,9 +450,42 @@ class Line {
     return title.trim();
   }
 
+  get unitNumber () {
+    return this._unitNumber;
+  }
+
+  get unitType () {
+    return this._unitType;
+  }
+
+  get unitCost () {
+    return this._unitCost;
+  }
+
+  get frequency () {
+    return this._frequency;
+  }
+
   get currency () {
     let currency = this._currency || config.default.currency;
     return currency.substring(0,3).toUpperCase();
+  }
+
+  get cost () {
+    return this.unitNumber * this.unitCost;
+  }
+
+  get total () {
+    let total = 0;
+    if (this.children && this.children.length) {
+      for (var i = 0; i < this.children.length; i++) {
+        let base = this.children[i].currency;
+        if (this.currency !== base) {
+          total += convert(this.children[i].total, base, this.currency);
+        } else total += this.children[i].total;
+      }
+    } else total = this.cost ? this.cost * this.frequency : 0;
+    return total;
   }
 
   get level () {
@@ -476,25 +585,6 @@ class Line {
     } else return;
   }
 
-  get cost () {
-    return this.unitNumber * this.unitCost * this.frequency;
-  }
-
-  get total () {
-    let total = 0;
-    if (this.children) {
-      for (var i = 0; i < this.children.length; i++) {
-        let base = this.children[i].currency;
-        if (this.currency !== base) {
-          total += convert(this.children[i].total, base, this.currency);
-        } else total += this.children[i].total;
-      }
-    } else total = this.cost ? this.cost : 0;
-    return config.roundDecimals ?
-      Number(total.toFixed(config.roundDecimals)) :
-      total;
-  }
-
   get currencies () {
     let currencies = [ this.currency ];
     if (!currencies.includes(config.default.currency)) {
@@ -559,7 +649,7 @@ class Line {
                 property == "cost" ||
                 property == "total"
               ) ? formatN(this[property]) : this[property];
-              this.viewProps[property].textContent = newValue;
+              this.viewProps[property].querySelector("span").textContent = newValue;
               if (
                 property == "unitCost" ||
                 property == "unitNumber" ||
@@ -577,13 +667,13 @@ class Line {
                 property == "cost" ||
                 property == "total"
               ) ? formatN(this[property]) : this[property];
-              this.viewProps[property].textContent = newValue;
+              this.viewProps[property].querySelector("span").textContent = newValue;
               //console.log(property + " - " + newValue);
             }
           }
         }
         this.viewUpdateGrandTotal();
-        exportJSON(budget, "exportoutput"); // for debugging
+        //exportJSON(budget, "exportoutput"); // for debugging
         break;
     }
 
@@ -633,6 +723,19 @@ class Line {
         n("ul.root", this.root.view),
         this.root.viewGrandTotal
       ]))
+
+      // The below event is necessary for the editing inputs to stay open if a user changes windows, but close them if they click elsewhere on the page
+      document.addEventListener("click", function (event) {
+        const inputsEditing = this.root.view.querySelectorAll(".editing input");
+        const pressEnter = new KeyboardEvent("keydown", { key: "Enter" });
+        for (var i = 0; i < inputsEditing.length; i++) {
+          inputsEditing[i].dispatchEvent(pressEnter);
+        }
+      }.bind(this));
+      this.root.view.addEventListener("click", function (event) {
+        event.stopPropagation();
+      }, false);
+
       this.root.appendedToBody = true;
     } else log("The root of this budget has already been added to the page.", "error");
   }
