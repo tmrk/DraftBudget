@@ -19,10 +19,13 @@ let config = {
   default: {
     currency: 'USD',
     lineColours: [
+      'rgba(255,255,255,0.05)',
       'rgba(255,255,255,0.1)',
-      'rgba(255,255,255,0.2)',
+      'rgba(255,255,255,0.15)',
       'rgba(255,255,255,0.3)',
+      'rgba(255,255,255,0.35)',
       'rgba(255,255,255,0.4)',
+      'rgba(255,255,255,0.45)',
       'rgba(255,255,255,0.5)'
     ],
     warnBeforeDelete: false
@@ -263,20 +266,24 @@ const cloneLine = (line) => {
 class Line {
 
   constructor (options = {}) {
-    let buttonDelete = n('span.button.delete',
-      n('span', 'Delete'),
-      {click: function () {
-          this.remove();
-        }.bind(this)
-      }
-    );
-    let buttonAdd = n("span.button.add",
-      n("span", "Add Subline"),
-      {click: function () {
-          this.add();
-        }.bind(this)
-      }
-    );
+
+    // The view needs to be initialised first
+    const [ buttonDelete, buttonAdd ] = [
+      n('span.button.delete',
+        n('span', 'Delete'),
+        {click: function () {
+            this.remove();
+          }.bind(this)
+        }
+      ),
+      n("span.button.add",
+        n("span", "Add Subline"),
+        {click: function () {
+            this.add();
+           }.bind(this)
+        }
+      )
+    ];
     this.viewProps = {
       index: n('div.col1.index', n("span", this.index)),
       title: n('div.col2.title.editable', n("span", this.title)),
@@ -348,6 +355,20 @@ class Line {
                                       thisIndex + 1 : 0;
                     inputUnfocused();
                     editables[nextIndex].click(); // simulating a click is the easiest at this point and it does the job
+                    break;
+                  case "ArrowUp":
+                  case "ArrowDown":
+                    event.preventDefault();
+                    //console.log(event.target.parentNode.dataset.property);
+                    const sameColumn = this.root.view.querySelectorAll(".editable:not(.invisible)[data-property=" + property + "]");
+                    const thisIndexCol = Array.from(sameColumn).indexOf(propNode);
+                    const prevIndexCol = (thisIndexCol !== 0) ? thisIndexCol - 1 :
+                                         sameColumn.length - 1;
+                    const nextIndexCol = (sameColumn.length - 1) !== thisIndexCol ?
+                                         thisIndexCol + 1 : 0;
+                    const indexToSelect = (event.key == "ArrowUp") ? prevIndexCol : nextIndexCol;
+                    inputUnfocused();
+                    sameColumn[indexToSelect].click();
                     break;
                   case "Enter":
                     event.preventDefault();
@@ -668,11 +689,11 @@ class Line {
                 property == "total"
               ) ? formatN(this[property]) : this[property];
               this.viewProps[property].querySelector("span").textContent = newValue;
-              //console.log(property + " - " + newValue);
             }
           }
         }
         this.viewUpdateGrandTotal();
+        if (this.view) this.view.style.backgroundColor = config.default.lineColours[this.level];
         //exportJSON(budget, "exportoutput"); // for debugging
         break;
     }
@@ -711,7 +732,8 @@ class Line {
         n("span.col6", "Frequency"),
         n("span.col7", "Cost"),
         n("span.col8", "Total"),
-        n("span.col9", "Currency")
+        n("span.col9", "Currency"),
+        n("span.col10", "Tools")
       ]);
       this.root.viewGrandTotal = n("footer.grandtotal", [
         n("strong.title.alignright", "Grand Total"),
