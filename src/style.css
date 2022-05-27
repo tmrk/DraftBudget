@@ -4,6 +4,9 @@
   margin: 0;
   padding: 0;
   list-style-type: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
 }
 
 .hidden {
@@ -18,10 +21,16 @@
   text-align: right;
 }
 
+html {
+  height: 100%;
+}
+
 body {
+  height: 100%;
   font-family: 'Roboto Mono', monospace;
   background: #000;
   color: rgba(255,255,255,0.9);
+  /*background: linear-gradient(135deg, rgba(0,68,170,1) 0%, rgba(187,0,187,1) 100%);*/
 }
 
 .budget {
@@ -30,7 +39,7 @@ body {
   margin: 20px auto;
   display: block;
   --borderradius: 0;
-  --width-col1: 8ch; /* index */
+  --width-col1: 9ch; /* index */
   --width-col2: 14ch; /* title */
   --width-col3: 4ch; /* unitNumber */
   --width-col4: 5ch; /* unitType */
@@ -49,6 +58,7 @@ body {
 }
 
 .budget > footer {
+  height: 70px;
   border-bottom-left-radius: var(--borderradius);
   border-bottom-right-radius: var(--borderradius);
 }
@@ -60,13 +70,36 @@ ul.root > li > .props {
 li.line {
 }
 
+ul.root > li.line > .props {
+  height: 70px;
+  display: flex;
+  align-items: stretch;
+}
+
+.budget > ul.root > li.line > .props > div > span {
+  padding-top: 0;
+  padding-bottom: 0;
+  display: flex;
+  align-items: center;
+}
+
+.budget > ul.root > li.line > .props > div.alignright > span {
+  justify-content: flex-end;
+}
+
+ul.root > li.line > .props,
+li.line.level1 > .props {
+  font-weight: bold;
+}
+
 .budget > header {
   background: rgba(255,255,255,0.15);
 }
 
 .props {
-  margin: 1px 0;
-  background: rgba(255,255,255,0.1);
+  margin: 2px 0;
+  background-color: rgba(255,255,255,0.5);
+
 }
 
 .props,
@@ -82,7 +115,7 @@ li.line {
 
 .budget *[class^="col"] > span {
   height: 100%;
-  padding: 0.5ch 1ch;
+  padding: 1ch 1ch;
   display: block;
 }
 
@@ -118,7 +151,9 @@ li.line {
   cursor: pointer;
 }
 
-.tools .button.add {
+ul.root > li.line > .props > .tools .button.delete,
+.hide-add-button .tools .button.add {
+  display: none;
 }
 
 .props > .col10 > .delete:hover {
@@ -129,6 +164,10 @@ li.line {
 .props > .col10 > .add:hover {
   background-color: green;
   color: #fff;
+}
+
+ul.root > li.line > .props > .index {
+  visibility: hidden;
 }
 
 .props > * {
@@ -160,18 +199,25 @@ li.line {
 .editing input {
   width: 100%;
   height: calc(100% - 1ch);
-  padding: 0.5ch 1ch;
+  padding: 1ch 1ch;
   border: none;
   outline: none;
   font-family: inherit;
   font-size: inherit;
   display: flex;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+.editing.alignright input {
+  text-align: right;
 }
 
 /* --- Grand total row --- */
 
 .grandtotal {
-  padding: 1ch calc(var(--width-col9) + var(--width-col10));
+  padding: 0 calc(var(--width-col9) + var(--width-col10));
   background: rgba(255,255,255,0.1);
   display: flex;
   justify-content: flex-end;
@@ -179,17 +225,27 @@ li.line {
 
 .grandtotal .title {
   display: inline-block;
+  display: flex;
+  align-items: center;
 }
 
 .grandtotal .amount {
   width: 10ch;
   padding: 0 1ch;
   display: inline-block;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .grandtotal .currency {
   width: 3ch;
   padding-left: 1ch;
+  display: flex;
+  align-items: center;
 }
 
 #export {
@@ -217,7 +273,19 @@ pre {
   overflow-x: auto;
 }
 
-body > header,
+body > header {
+  margin: 40px auto;
+  text-align: center;
+}
+
+body > header h1 {
+
+}
+
+body > header h2 {
+  color: rgba(255,255,255,0.6);
+}
+
 body > footer {
   height: 100px;
   display: flex;
@@ -226,16 +294,15 @@ body > footer {
   justify-content: center;
 }
 
-body > header strong {
+body > footer strong {
   cursor: pointer;
 }
 
-body > header strong:hover {
-  color: red;
+body > footer strong:hover {
+  color: yellow;
 }
 
 body > footer {
   text-align: center;
-  font-style: italic;
   color: rgba(255,255,255,0.6);
 }

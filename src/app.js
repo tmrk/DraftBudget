@@ -19,21 +19,18 @@ let config = {
   default: {
     currency: 'USD',
     lineColours: [
-      'rgba(255,255,255,0.05)',
       'rgba(255,255,255,0.1)',
-      'rgba(255,255,255,0.15)',
+      'rgba(255,255,255,0.2)',
       'rgba(255,255,255,0.3)',
-      'rgba(255,255,255,0.35)',
-      'rgba(255,255,255,0.4)',
-      'rgba(255,255,255,0.45)',
-      'rgba(255,255,255,0.5)'
+      'rgba(255,255,255,0.5)',
+      'rgba(255,255,255,0.65)'
     ],
     warnBeforeDelete: false
   }
 }
 let syslog = JSON.parse(localStorage.getItem('syslog')) || [];
 let quietMode;
-let symbols = {};
+window.symbols = {};
 let rates = {};
 
 /* ----- Functions ----- */
@@ -175,6 +172,16 @@ const start = function () {
   ]);
 
   document.body.appendChild(n("header", [
+    n("h1", "DraftBudget"),
+    n("h2", "pre-alpha")
+  ]));
+
+  //document.body.appendChild(viewExport);
+  createBudget("budget", {title: "My new budget"})
+  addMockData(budget);
+
+  document.body.appendChild(n("footer", [
+    //n("p", "Refresh the page if the above table is empty!</br>(The exchange rate loader script is not working properly yet.)")
     n("span", "Debug:"),
     n("strong", "Clear localStorage", {
       click: function () {
@@ -188,19 +195,16 @@ const start = function () {
       }
     })
   ]));
-
-  //document.body.appendChild(viewExport);
-  createBudget("budget")
-  addMockData(budget);
-
-  document.body.appendChild(n("footer", [
-    n("p", "Refresh the page if the above table is empty!</br>(The exchange rate loader script is not working properly yet.)")
-  ]));
 }
 
 const addMockData = function (b) {
   if (b && b instanceof Line) {
     quietMode = true;
+    b.add();
+    b.getLine(1).add();
+    b.getLine("1.1").add();
+    b.getLine("1.1.1").add();
+    /*
     b.add({currency: 'CHF'})
     b.add({currency: 'EUR'})
     b.getLine(1).add()
@@ -215,7 +219,7 @@ const addMockData = function (b) {
     b.getLine(2).getLine(1).add({unitCost: 333, unitType: "pcs", currency: 'GBP'});
     b.getLine(2).getLine(1).add({unitCost: 444, currency: 'MXN'});
     b.getLine(2).getLine(1).add({unitCost: 555, currency: 'HKD'});
-    b.viewUpdate("down");
+    */
     quietMode = false;
     console.log(budget);
   }
@@ -269,17 +273,17 @@ class Line {
 
     // The view needs to be initialised first
     const [ buttonDelete, buttonAdd ] = [
-      n('span.button.delete',
-        n('span', 'Delete'),
+      n("span.button.delete", "Delete",
         {click: function () {
             this.remove();
           }.bind(this)
         }
       ),
-      n("span.button.add",
-        n("span", "Add Subline"),
+      n("span.button.add", "Add Subline",
         {click: function () {
             this.add();
+            const newLine = this.children[this.children.length - 1];
+            newLine.viewEdit("title");
            }.bind(this)
         }
       )
@@ -326,66 +330,15 @@ class Line {
       if (propNode.classList.contains("editable")) {
 
         /* Clicking on line properties to edit them */
-        propNode.addEventListener("click", function () {
-          if (!propNode.getElementsByTagName("input").length) {
-            const previousEditing = this.root.view.querySelector(".editing input");
-            const pressEnter = new KeyboardEvent("keydown", { key: "Enter" });
-            if (previousEditing) previousEditing.dispatchEvent(pressEnter);
-            propNode.classList.add("editing");
-            const property = propNode.dataset.property; // need to reset this
-            const originalValue = this[property];
-            const inputUnfocused = (cancel) => {
-              this[property] = cancel ? originalValue : event.target.value;
-              event.target.remove();
-              propNode.classList.remove("editing");
-              log("Editing " + this.index + " " + property +  " finished, changes " +
-                (cancel ? "discarded." : "saved."), "info");
-            };
-            const inputEdit = n("input|value=" + originalValue, "", {
-              input: function (event) {
-                this[property] = event.target.value;
-              }.bind(this),
-              keydown: function (event) {
-                switch (event.key) {
-                  case "Tab":
-                    event.preventDefault();
-                    const editables = this.root.view.querySelectorAll(".editable:not(.invisible)");
-                    const thisIndex = Array.from(editables).indexOf(propNode);
-                    const nextIndex = (editables.length - 1) !== thisIndex ?
-                                      thisIndex + 1 : 0;
-                    inputUnfocused();
-                    editables[nextIndex].click(); // simulating a click is the easiest at this point and it does the job
-                    break;
-                  case "ArrowUp":
-                  case "ArrowDown":
-                    event.preventDefault();
-                    //console.log(event.target.parentNode.dataset.property);
-                    const sameColumn = this.root.view.querySelectorAll(".editable:not(.invisible)[data-property=" + property + "]");
-                    const thisIndexCol = Array.from(sameColumn).indexOf(propNode);
-                    const prevIndexCol = (thisIndexCol !== 0) ? thisIndexCol - 1 :
-                                         sameColumn.length - 1;
-                    const nextIndexCol = (sameColumn.length - 1) !== thisIndexCol ?
-                                         thisIndexCol + 1 : 0;
-                    const indexToSelect = (event.key == "ArrowUp") ? prevIndexCol : nextIndexCol;
-                    inputUnfocused();
-                    sameColumn[indexToSelect].click();
-                    break;
-                  case "Enter":
-                    event.preventDefault();
-                    inputUnfocused();
-                    break;
-                  case "Escape":
-                    event.preventDefault();
-                    inputUnfocused(true);
-                    break;
-                  default:
-                }
-              }.bind(this)
-            });
-            propNode.appendChild(inputEdit);
-            inputEdit.focus();
-            log("Editing " + this.index + " " + property);
-          }
+        propNode.addEventListener("click", function (e) {
+          e.stopPropagation();
+          const property = propNode.dataset.property; // need to re-set this
+          this.viewEdit(property);
+        }.bind(this));
+      } else if (property == "total" || property == "cost") {
+        propNode.addEventListener("click", function (e) {
+          e.stopPropagation();
+          if (!this.children || !this.children.length) this.viewEdit("unitCost");
         }.bind(this));
       }
     }
@@ -440,7 +393,7 @@ class Line {
   }
 
   set currency (currency) {
-    this._currency = currency;
+    if (symbols.hasOwnProperty(currency.toUpperCase())) this._currency = currency; // only set the currency if it exists
     this.viewUpdate(false, [ "currency" ]);
     this.viewUpdate("up", [ "total" ]);
   }
@@ -627,8 +580,76 @@ class Line {
 
   viewAdd (newLine, index) {
     this.viewChildren.appendChild(newLine.view);
+    newLine.view.dataset.level = this.level + 1;
+    newLine.view.classList.add("level" + (this.level + 1));
+    if (this.level + 2 == config.levelNames.length) newLine.view.classList.add("hide-add-button");
     newLine.viewUpdate();
     newLine.parent.viewUpdate("up");
+  }
+
+  viewEdit (property) {
+    const propNode = this.viewProps[property];
+    const propNodeInput = propNode.querySelector("input");
+    if (!propNodeInput) {
+      const previousEditing = this.root.view.querySelector(".editing input");
+      const pressEnter = new KeyboardEvent("keydown", { key: "Enter" });
+      if (previousEditing) previousEditing.dispatchEvent(pressEnter);
+      propNode.classList.add("editing");
+
+      const originalValue = this[property];
+
+      const inputUnfocused = (cancel, event) => {
+        this[property] = cancel ? originalValue : inputEdit.value;
+        inputEdit.remove();
+        propNode.classList.remove("editing");
+        log("Editing " + this.index + " " + property +  " finished, changes " +
+          (cancel ? "discarded." : "saved."), "info");
+      };
+
+      const inputEdit = n("input|value=" + originalValue, "", {
+        input: function (event) {
+          this[property] = event.target.value;
+        }.bind(this),
+        keydown: function (event) {
+          switch (event.key) {
+            case "Tab":
+              event.preventDefault();
+              const editables = this.root.view.querySelectorAll(".editable:not(.invisible)");
+              const thisIndex = Array.from(editables).indexOf(propNode);
+              const nextIndex = (editables.length - 1) !== thisIndex ?
+                                thisIndex + 1 : 0;
+              inputUnfocused();
+              editables[nextIndex].click(); // simulating a click is the easiest at this point and it does the job
+              break;
+            case "ArrowUp":
+            case "ArrowDown":
+              event.preventDefault();
+              const sameColumn = this.root.view.querySelectorAll(".editable:not(.invisible)[data-property=" + property + "]");
+              const thisIndexCol = Array.from(sameColumn).indexOf(propNode);
+              const prevIndexCol = (thisIndexCol !== 0) ? thisIndexCol - 1 :
+                                   sameColumn.length - 1;
+              const nextIndexCol = (sameColumn.length - 1) !== thisIndexCol ?
+                                   thisIndexCol + 1 : 0;
+              const indexToSelect = (event.key == "ArrowUp") ? prevIndexCol : nextIndexCol;
+              inputUnfocused();
+              sameColumn[indexToSelect].click();
+              break;
+            case "Enter":
+              event.preventDefault();
+              inputUnfocused();
+              break;
+            case "Escape":
+              event.preventDefault();
+              inputUnfocused(true);
+              break;
+            default:
+          }
+        }.bind(this)
+      });
+      propNode.appendChild(inputEdit);
+      inputEdit.focus();
+      log("Editing " + this.index + " " + property);
+    } else propNodeInput.focus();
   }
 
   viewRemove () {
@@ -693,7 +714,7 @@ class Line {
           }
         }
         this.viewUpdateGrandTotal();
-        if (this.view) this.view.style.backgroundColor = config.default.lineColours[this.level];
+        if (this.view) this.view.querySelector(".props").style.backgroundColor = config.default.lineColours[this.level]; // Row colours from config
         //exportJSON(budget, "exportoutput"); // for debugging
         break;
     }
@@ -746,17 +767,18 @@ class Line {
         this.root.viewGrandTotal
       ]))
 
+      /*
       // The below event is necessary for the editing inputs to stay open if a user changes windows, but close them if they click elsewhere on the page
       document.addEventListener("click", function (event) {
         const inputsEditing = this.root.view.querySelectorAll(".editing input");
+        console.log(inputsEditing.parentNode)
         const pressEnter = new KeyboardEvent("keydown", { key: "Enter" });
         for (var i = 0; i < inputsEditing.length; i++) {
+          console.log(inputsEditing[i])
           inputsEditing[i].dispatchEvent(pressEnter);
         }
       }.bind(this));
-      this.root.view.addEventListener("click", function (event) {
-        event.stopPropagation();
-      }, false);
+      */
 
       this.root.appendedToBody = true;
     } else log("The root of this budget has already been added to the page.", "error");
@@ -791,7 +813,6 @@ class Line {
     }
 
     const newLine = new Line(options);
-
     Object.defineProperty(newLine, "parent", { get: () => newParent });
     if (newParent.children) {
       if (index && index < newParent.children.length) {
