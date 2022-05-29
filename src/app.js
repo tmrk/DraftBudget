@@ -362,7 +362,8 @@ const exportToExcel = (line) => {
     }
     //cell.style.font.bold = true;
   });
-
+  
+  /*
   let baseCurrency = line.currency;
   let currencyDate = rates[baseCurrency].date;
   let sheetRates = workbook.addWorksheet('Exchange rates (' + currencyDate + ')', {
@@ -383,6 +384,7 @@ const exportToExcel = (line) => {
       });
     }
   }
+  */
 
   let a = document.createElement('a');
   document.body.appendChild(a);
