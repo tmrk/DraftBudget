@@ -1,5 +1,7 @@
 'use strict';
 
+import ExcelJS from 'exceljs';
+
 /* ----- Variables ----- */
 
 let config = {
@@ -28,7 +30,7 @@ let config = {
     warnBeforeDelete: false
   }
 }
-let syslog = JSON.parse(localStorage.getItem('syslog')) || [];
+let syslog = JSON.parse(localStorage.getItem("syslog")) || [];
 let quietMode;
 window.symbols = {};
 let rates = {};
@@ -265,6 +267,138 @@ const cloneLine = (line) => {
   return newLine;
 }
 
+const exportToExcel = (line) => {
+  let workbook = new ExcelJS.Workbook();
+  let sheet = workbook.addWorksheet('My Sheet', {
+    properties: {
+      defaultRowHeight: 20
+    },
+    pageSetup: {
+      paperSize: 9,
+      orientation:'landscape'
+    }
+  });
+  let defaultStyle = {
+    font: {
+      name: 'Arial',
+      size: 14
+    },
+    alignment: {
+      vertical: 'middle'
+    }
+  };
+  let dateStyle = {
+    font: {
+      name: 'Arial',
+      size: 14
+    },
+    alignment: {
+      vertical: 'middle',
+      horizontal: 'center'
+    },
+    numFmt: 'yyyy-mm-dd'
+  };
+  let costStyle = {
+    font: {
+      name: 'Arial',
+      size: 14
+    },
+    alignment: {
+      vertical: 'middle',
+      horizontal: 'right'
+    },
+    numFmt: '#,##0'
+  }
+  sheet.columns = [
+    { header: 'Index', key: 'index', width: 10, style: defaultStyle },
+    { header: 'Title', key: 'title', width: 32, style: defaultStyle },
+    { header: 'Cost', key: 'cost', width: 10, style: costStyle },
+    { header: 'Currency', key: 'currency', width: 10, style: defaultStyle },
+    { header: 'Start date', key: 'start', width: 15, style: dateStyle },
+    { header: 'End date', key: 'end', width: 15, style: dateStyle }
+  ];
+  function writeLine (line) {
+    if (line.index) {
+      let row = sheet.addRow({
+        index: line.index,
+        title: line.title,
+        cost: line.total,
+        currency: line.currency,
+        start: new Date(line.start),
+        end: new Date(line.end)
+      });
+      let bgColor = ['cccccc', 'dddddd', 'eeeeee'];
+      row.eachCell({ includeEmpty: false }, function (cell) {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: {argb: bgColor[line.level] || 'ffffff'}
+        };
+      });
+
+    }
+  };
+  writeLine(line);
+  (function writeChildren (line) {
+    if (line.children) for (var i = 0; i < line.children.length; i++) {
+      let row = line.children[i];
+      writeLine(row);
+      writeChildren(row);
+    }
+  }(line));
+  let rowTotal = sheet.addRow({
+    index: '',
+    title: 'Grand total',
+    cost: line.total,
+    currency: line.currency,
+    start: '',
+    end: ''
+  });
+  rowTotal.eachCell({ includeEmpty: false }, function (cell) {
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: {argb: 'cccccc'}
+    }
+    //cell.style.font.bold = true;
+  });
+
+  let baseCurrency = line.currency;
+  let currencyDate = rates[baseCurrency].date;
+  let sheetRates = workbook.addWorksheet('Exchange rates (' + currencyDate + ')', {
+    pageSetup: {
+      paperSize: 9,
+    }
+  });
+  sheetRates.columns = [
+    { header: 'Currency', key: 'currency', width: 10, style: defaultStyle },
+    { header: 'Rate', key: 'rate', width: 10, style: defaultStyle }
+  ];
+  let rate = rates[baseCurrency].rates;
+  for (var key in rate) {
+    if (rate.hasOwnProperty(key)) {
+      sheetRates.addRow({
+        currency: key,
+        rate: rate[key]
+      });
+    }
+  }
+
+  let a = document.createElement('a');
+  document.body.appendChild(a);
+  a.style = 'display: none';
+  workbook.xlsx.writeBuffer().then(function(data) {
+    const blob = new Blob([data], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8'});
+    let url = window.URL.createObjectURL(blob);
+    a.href = url;
+    a.download = line.title.split(' ').join('_') + '_' + new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').split('.')[0];
+    a.click();
+    window.URL.revokeObjectURL(url);
+  });
+
+}
+
+
 /* ----- Line code ----- */
 
 class Line {
@@ -280,7 +414,8 @@ class Line {
         }
       ),
       n("span.button.add", "Add Subline",
-        {click: function () {
+        {click: function (e) {
+            e.stopImmediatePropagation(); // so that it doesn't fire removeInput() upon clicking on document
             this.add();
             const newLine = this.children[this.children.length - 1];
             newLine.viewEdit("title");
@@ -419,8 +554,12 @@ class Line {
     return this.end - this.start;
   }
 
+  get defaultTitle () {
+    return this.levelName + "-" + this.lineNumber;
+  }
+
   get title () {
-    let title = this._title || this.levelName + "-" + this.lineNumber;
+    let title = this._title || this.defaultTitle;
     return title.trim();
   }
 
@@ -591,6 +730,7 @@ class Line {
     const propNode = this.viewProps[property];
     const propNodeInput = propNode.querySelector("input");
     if (!propNodeInput) {
+
       const previousEditing = this.root.view.querySelector(".editing input");
       const pressEnter = new KeyboardEvent("keydown", { key: "Enter" });
       if (previousEditing) previousEditing.dispatchEvent(pressEnter);
@@ -598,15 +738,20 @@ class Line {
 
       const originalValue = this[property];
 
-      const inputUnfocused = (cancel, event) => {
-        this[property] = cancel ? originalValue : inputEdit.value;
+      const removeInput = (cancelEdit) => {
+        document.removeEventListener("click", removeInput);
+        this[property] = cancelEdit ? originalValue : inputEdit.value;
         inputEdit.remove();
         propNode.classList.remove("editing");
         log("Editing " + this.index + " " + property +  " finished, changes " +
-          (cancel ? "discarded." : "saved."), "info");
+          (cancelEdit ? "discarded." : "saved."), "info");
       };
+      document.addEventListener("click", removeInput);
 
-      const inputEdit = n("input|value=" + originalValue, "", {
+      const inputEdit = n("input"
+                      + "|value=" + originalValue
+                      + "|placeholder=" + this.defaultTitle,
+                      "", {
         input: function (event) {
           this[property] = event.target.value;
         }.bind(this),
@@ -618,7 +763,7 @@ class Line {
               const thisIndex = Array.from(editables).indexOf(propNode);
               const nextIndex = (editables.length - 1) !== thisIndex ?
                                 thisIndex + 1 : 0;
-              inputUnfocused();
+              removeInput();
               editables[nextIndex].click(); // simulating a click is the easiest at this point and it does the job
               break;
             case "ArrowUp":
@@ -631,16 +776,16 @@ class Line {
               const nextIndexCol = (sameColumn.length - 1) !== thisIndexCol ?
                                    thisIndexCol + 1 : 0;
               const indexToSelect = (event.key == "ArrowUp") ? prevIndexCol : nextIndexCol;
-              inputUnfocused();
+              removeInput();
               sameColumn[indexToSelect].click();
               break;
             case "Enter":
               event.preventDefault();
-              inputUnfocused();
+              removeInput();
               break;
             case "Escape":
               event.preventDefault();
-              inputUnfocused(true);
+              removeInput(true);
               break;
             default:
           }
@@ -764,22 +909,13 @@ class Line {
       document.body.appendChild(n("div.budget", [
         header,
         n("ul.root", this.root.view),
-        this.root.viewGrandTotal
-      ]))
-
-      /*
-      // The below event is necessary for the editing inputs to stay open if a user changes windows, but close them if they click elsewhere on the page
-      document.addEventListener("click", function (event) {
-        const inputsEditing = this.root.view.querySelectorAll(".editing input");
-        console.log(inputsEditing.parentNode)
-        const pressEnter = new KeyboardEvent("keydown", { key: "Enter" });
-        for (var i = 0; i < inputsEditing.length; i++) {
-          console.log(inputsEditing[i])
-          inputsEditing[i].dispatchEvent(pressEnter);
-        }
-      }.bind(this));
-      */
-
+        this.root.viewGrandTotal,
+        n("button", "Export budget to Excel", {
+          click: function () {
+            exportToExcel(budget);
+          }
+        })
+      ]));
       this.root.appendedToBody = true;
     } else log("The root of this budget has already been added to the page.", "error");
   }

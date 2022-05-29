@@ -63,11 +63,20 @@ body {
   border-bottom-right-radius: var(--borderradius);
 }
 
-ul.root > li > .props {
-
+.budget > button {
+  width: 500px;
+  margin: 20px auto;
+  padding: 12px;
+  border: none;
+  display: block;
+  font-family: inherit;
+  font-size: 1.2rem;
+  cursor: pointer;
 }
 
-li.line {
+.budget > button:hover {
+  background: green;
+  color: #fff;
 }
 
 ul.root > li.line > .props {

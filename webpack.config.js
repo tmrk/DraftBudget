@@ -8,6 +8,9 @@ module.exports = {
     filename: 'main.js',
     path: path.resolve(__dirname, 'dist'),
   },
+  performance: {
+    hints: false,
+  },
   module: {
     rules: [
       {
@@ -29,5 +32,8 @@ module.exports = {
           mangle: false
         },
     })],
+  },
+  externals: {
+    ExcelJS: require('exceljs')
   },
 };
