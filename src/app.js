@@ -227,12 +227,6 @@ const addMockData = function (b) {
   }
 }
 
-const exportJSON = (data, targetID) => {
-  const dataString = JSON.stringify(data, 2, 2);
-  const target = document.getElementById(targetID);
-  if (target) target.textContent = dataString;
-};
-
 const createBudget = (varName, options = {}) => {
   log(varName);
   if (!window[varName]) {
@@ -257,8 +251,8 @@ const cloneLine = (line) => {
       ].includes(property)) {
         newLine[property] = clone[property];
       } else if ([
-        "_modified", "_currency", "_start", "_end",  "_title", "_unitNumber",
-        "_unitType", "_unitCost", "_frequency"
+        "_modified", "_currency", "_start", "_end",  "_title",
+        "_unitNumber", "_unitType", "_unitCost", "_frequency"
       ].includes(property)) {
         newLine[property.replace("_", "")] = clone[property];
       }
@@ -266,6 +260,32 @@ const cloneLine = (line) => {
   }
   return newLine;
 }
+
+const exportToJSON = (line, outputAsObject, propertiesToExport) => {
+  propertiesToExport = propertiesToExport || [
+    "index", "title", "unitNumber", "unitType", "unitCost", "frequency", "cost",
+    "total", "currency", "start", "end", "created", "modified"
+  ];
+  const lineHasChildren = line.children && line.children.length;
+  const exportObject = {};
+  for (let i = 0; i < propertiesToExport.length; i++) {
+    const property = propertiesToExport[i];
+    if (line[property] || property === "index") {
+      if (["unitNumber", "unitType", "unitCost", "frequency", "cost"]
+          .includes(property)) {
+        if (!lineHasChildren) exportObject[property] = line[property];
+      } else exportObject[property] = line[property];
+    }
+  }
+  if (lineHasChildren) {
+    exportObject.children = [];
+    for (let i = 0; i < line.children.length; i++) {
+      let childObject = exportToJSON(line.children[i], true);
+      exportObject.children.push(childObject);
+    }
+  }
+  return outputAsObject ? exportObject : JSON.stringify(exportObject);
+};
 
 const exportToExcel = (line) => {
   let workbook = new ExcelJS.Workbook();
@@ -362,29 +382,29 @@ const exportToExcel = (line) => {
     }
     //cell.style.font.bold = true;
   });
-  
-  /*
-  let baseCurrency = line.currency;
-  let currencyDate = rates[baseCurrency].date;
-  let sheetRates = workbook.addWorksheet('Exchange rates (' + currencyDate + ')', {
-    pageSetup: {
-      paperSize: 9,
-    }
-  });
-  sheetRates.columns = [
-    { header: 'Currency', key: 'currency', width: 10, style: defaultStyle },
-    { header: 'Rate', key: 'rate', width: 10, style: defaultStyle }
-  ];
-  let rate = rates[baseCurrency].rates;
-  for (var key in rate) {
-    if (rate.hasOwnProperty(key)) {
-      sheetRates.addRow({
-        currency: key,
-        rate: rate[key]
-      });
-    }
-  }
-  */
+
+
+  // let baseCurrency = line.currency;
+  // let currencyDate = rates[baseCurrency].date;
+  // let sheetRates = workbook.addWorksheet('Exchange rates (' + currencyDate + ')', {
+  //   pageSetup: {
+  //     paperSize: 9,
+  //   }
+  // });
+  // sheetRates.columns = [
+  //   { header: 'Currency', key: 'currency', width: 10, style: defaultStyle },
+  //   { header: 'Rate', key: 'rate', width: 10, style: defaultStyle }
+  // ];
+  // let rate = rates[baseCurrency].rates;
+  // for (var key in rate) {
+  //   if (rate.hasOwnProperty(key)) {
+  //     sheetRates.addRow({
+  //       currency: key,
+  //       rate: rate[key]
+  //     });
+  //   }
+  // }
+
 
   let a = document.createElement('a');
   document.body.appendChild(a);
@@ -396,6 +416,7 @@ const exportToExcel = (line) => {
     a.download = line.title.split(' ').join('_') + '_' + new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').split('.')[0];
     a.click();
     window.URL.revokeObjectURL(url);
+    a.remove();
   });
 
 }
@@ -405,17 +426,17 @@ const exportToExcel = (line) => {
 
 class Line {
 
-  constructor (options = {}) {
+  constructor (options = {}, level = 0) {
 
-    // The view needs to be initialised first
-    const [ buttonDelete, buttonAdd ] = [
-      n("span.button.delete", "Delete",
+    // The view needs to be initialised before looping through the options
+    this.view = {
+      buttonDelete: n("span.button.delete", "Delete",
         {click: function () {
             this.remove();
           }.bind(this)
         }
       ),
-      n("span.button.add", "Add Subline",
+      buttonAdd: n("span.button.add", "Add " + config.levelNames[level + 1],
         {click: function (e) {
             e.stopImmediatePropagation(); // so that it doesn't fire removeInput() upon clicking on document
             this.add();
@@ -423,23 +444,22 @@ class Line {
             newLine.viewEdit("title");
            }.bind(this)
         }
-      )
-    ];
-    this.viewProps = {
-      index: n('div.col1.index', n("span", this.index)),
-      title: n('div.col2.title.editable', n("span", this.title)),
-      unitNumber: n('div.col3.unitnumber.editable', n("span", this.unitNumber)),
-      unitType: n('div.col4.unittype.editable', n("span", this.unitType)),
-      unitCost: n('div.col5.unitcost.alignright.editable', n("span", formatN(this.unitCost))),
-      frequency: n('div.col6.frequency.alignright.editable', n("span", this.frequency)),
-      cost: n('div.col7.cost.alignright', n("span", formatN(this.cost))),
-      total: n('div.col8.total.alignright', n("span", formatN(this.total))),
-      currency: n('div.col9.currency.editable', n("span", this.currency)),
-      tools: n('div.col10.tools', [ buttonDelete, buttonAdd ])
+      ),
+      props: {
+        index: n('div.col1.index', n("span", this.index)),
+        title: n('div.col2.title.editable', n("span", this.title)),
+        unitNumber: n('div.col3.unitnumber.editable', n("span", this.unitNumber)),
+        unitType: n('div.col4.unittype.editable', n("span", this.unitType)),
+        unitCost: n('div.col5.unitcost.alignright.editable', n("span", formatN(this.unitCost))),
+        frequency: n('div.col6.frequency.alignright.editable', n("span", this.frequency)),
+        cost: n('div.col7.cost.alignright', n("span", formatN(this.cost))),
+        total: n('div.col8.total.alignright', n("span", formatN(this.total))),
+        currency: n('div.col9.currency.editable', n("span", this.currency)),
+        tools: n('div.col10.tools')
+      }
     };
+    this.view.props.tools.append(this.view.buttonDelete, this.view.buttonAdd);
 
-    this.created = this.created || new Date().getTime();
-    this.modified = this.modified || this.created;
     for (var v in options) {
       if (options.hasOwnProperty(v) && v !== 'children') this[v] = options[v];
     }
@@ -447,22 +467,11 @@ class Line {
     if (!this._start) this.start = new Date().getTime();
     if (!this._end) this.end = this._start + 86400000;
 
-    const viewProps = n("div.props", [
-      this.viewProps.index,
-      this.viewProps.title,
-      this.viewProps.unitNumber,
-      this.viewProps.unitType,
-      this.viewProps.unitCost,
-      this.viewProps.frequency,
-      this.viewProps.cost,
-      this.viewProps.total,
-      this.viewProps.currency,
-      this.viewProps.tools
-    ]);
-    this.viewChildren = n("ul");
+    this.created = this.created || new Date().getTime();
+    this.modified = this.modified || this.created;
 
-    for (var property in this.viewProps) {
-      const propNode = this.viewProps[property];
+    for (var property in this.view.props) {
+      const propNode = this.view.props[property];
       propNode.setAttribute("data-property", property);
       if (propNode.classList.contains("editable")) {
 
@@ -480,9 +489,21 @@ class Line {
       }
     }
 
-    this.view = n("li.line", [
-      viewProps,
-      this.viewChildren
+    this.view.children = n("ul");
+    this.view.node = n("li.line", [
+      n("div.props", [
+        this.view.props.index,
+        this.view.props.title,
+        this.view.props.unitNumber,
+        this.view.props.unitType,
+        this.view.props.unitCost,
+        this.view.props.frequency,
+        this.view.props.cost,
+        this.view.props.total,
+        this.view.props.currency,
+        this.view.props.tools
+      ]),
+      this.view.children
     ]);
   }
 
@@ -494,19 +515,23 @@ class Line {
 
   set start (date) {
     this._start = date;
+    this.modified = new Date().getTime();
   }
 
   set end (date) {
     this._end = date;
+    this.modified = new Date().getTime();
   }
 
   set title (title) {
     if (title && title.trim() && title !== this.title) this._title = title;
+    this.modified = new Date().getTime();
     this.viewUpdate(false, [ "title" ]);
   }
 
   set unitNumber (unitNumber) {
     this._unitNumber = unitNumber;
+    this.modified = new Date().getTime();
     this.viewUpdate(false, [ "unitNumber", "cost" ]);
     this.viewUpdate("up", [ "total" ]);
   }
@@ -514,23 +539,29 @@ class Line {
   set unitType (unitType) {
     this._unitType = unitType;
     if (unitType == "ls" || unitType == "lumpsum") this.unitNumber = 1;
+    this.modified = new Date().getTime();
     this.viewUpdate(false, [ "unitType" ]);
   }
 
   set unitCost (unitCost) {
     this._unitCost = unitCost;
+    this.modified = new Date().getTime();
     this.viewUpdate(false, [ "unitCost", "cost" ]);
     this.viewUpdate("up", [ "total" ]);
   }
 
   set frequency (frequency) {
     this._frequency = frequency;
+    this.modified = new Date().getTime();
     this.viewUpdate(false, [ "frequency" ]);
     this.viewUpdate("up", [ "total" ]);
   }
 
   set currency (currency) {
-    if (symbols.hasOwnProperty(currency.toUpperCase())) this._currency = currency; // only set the currency if it exists
+    if (symbols.hasOwnProperty(currency.toUpperCase())) { // only set the currency if it exists
+      this._currency = currency;
+      this.modified = new Date().getTime();
+    }
     this.viewUpdate(false, [ "currency" ]);
     this.viewUpdate("up", [ "total" ]);
   }
@@ -538,9 +569,15 @@ class Line {
   set category (category) {
     if (Array.isArray(category)) this._category = category;
     else this._category = [category];
+    this.modified = new Date().getTime();
   }
 
   /* --- Getters --- */
+
+  get modified () {
+    let lastModified = this.getLast('_modified', true) || this;
+    return lastModified._modified;
+  }
 
   get start () {
     let firstStartDate = this.getFirst('_start', true) || this;
@@ -658,7 +695,7 @@ class Line {
 
   get siblings () {
     let siblings = [];
-    for (var i = 0; i < this.parent.children.length; i++) {
+    for (let i = 0; i < this.parent.children.length; i++) {
       if (this.parent.children[i] !== this) {
         siblings.push(this.parent.children[i]);
       }
@@ -669,7 +706,7 @@ class Line {
   get descendants () {
     let descendants = [];
     if (this.children) {
-      for (var i = 0; i < this.children.length; i++) {
+      for (let i = 0; i < this.children.length; i++) {
         descendants.push(this.children[i]);
         descendants = descendants.concat(this.children[i].descendants);
       }
@@ -717,23 +754,23 @@ class Line {
     return currencies.sort();
   }
 
-  /* --- View --- */
+  /* --- View methods --- */
 
   viewAdd (newLine, index) {
-    this.viewChildren.appendChild(newLine.view);
-    newLine.view.dataset.level = this.level + 1;
-    newLine.view.classList.add("level" + (this.level + 1));
-    if (this.level + 2 == config.levelNames.length) newLine.view.classList.add("hide-add-button");
+    this.view.children.appendChild(newLine.view.node);
+    newLine.view.node.dataset.level = this.level + 1;
+    newLine.view.node.classList.add("level" + (this.level + 1));
+    if (this.level + 2 == config.levelNames.length) newLine.view.node.classList.add("hide-add-button");
     newLine.viewUpdate();
     newLine.parent.viewUpdate("up");
   }
 
   viewEdit (property) {
-    const propNode = this.viewProps[property];
+    const propNode = this.view.props[property];
     const propNodeInput = propNode.querySelector("input");
     if (!propNodeInput) {
 
-      const previousEditing = this.root.view.querySelector(".editing input");
+      const previousEditing = this.root.view.node.querySelector(".editing input");
       const pressEnter = new KeyboardEvent("keydown", { key: "Enter" });
       if (previousEditing) previousEditing.dispatchEvent(pressEnter);
       propNode.classList.add("editing");
@@ -761,7 +798,7 @@ class Line {
           switch (event.key) {
             case "Tab":
               event.preventDefault();
-              const editables = this.root.view.querySelectorAll(".editable:not(.invisible)");
+              const editables = this.root.view.node.querySelectorAll(".editable:not(.invisible)");
               const thisIndex = Array.from(editables).indexOf(propNode);
               const nextIndex = (editables.length - 1) !== thisIndex ?
                                 thisIndex + 1 : 0;
@@ -771,7 +808,7 @@ class Line {
             case "ArrowUp":
             case "ArrowDown":
               event.preventDefault();
-              const sameColumn = this.root.view.querySelectorAll(".editable:not(.invisible)[data-property=" + property + "]");
+              const sameColumn = this.root.view.node.querySelectorAll(".editable:not(.invisible)[data-property=" + property + "]");
               const thisIndexCol = Array.from(sameColumn).indexOf(propNode);
               const prevIndexCol = (thisIndexCol !== 0) ? thisIndexCol - 1 :
                                    sameColumn.length - 1;
@@ -795,12 +832,13 @@ class Line {
       });
       propNode.appendChild(inputEdit);
       inputEdit.focus();
+      inputEdit.select();
       log("Editing " + this.index + " " + property);
     } else propNodeInput.focus();
   }
 
   viewRemove () {
-    this.view.remove();
+    this.view.node.remove();
     this.parent.viewUpdate("updown");
   }
 
@@ -832,13 +870,13 @@ class Line {
         if (properties) {
           for (let i = 0; i < properties.length; i++) {
             const property = properties[i];
-            if (this.viewProps[property]) {
+            if (this.view.props[property]) {
               let newValue = (
                 property == "unitCost" ||
                 property == "cost" ||
                 property == "total"
               ) ? formatN(this[property]) : this[property];
-              this.viewProps[property].querySelector("span").textContent = newValue;
+              this.view.props[property].querySelector("span").textContent = newValue;
               if (
                 property == "unitCost" ||
                 property == "unitNumber" ||
@@ -849,30 +887,30 @@ class Line {
             }
           }
         } else {
-          for (let property in this.viewProps) {
-            if (property !== "tools" && this.viewProps.hasOwnProperty(property)) {
+          for (let property in this.view.props) {
+            if (property !== "tools" && this.view.props.hasOwnProperty(property)) {
               let newValue = (
                 property == "unitCost" ||
                 property == "cost" ||
                 property == "total"
               ) ? formatN(this[property]) : this[property];
-              this.viewProps[property].querySelector("span").textContent = newValue;
+              this.view.props[property].querySelector("span").textContent = newValue;
             }
           }
         }
         this.viewUpdateGrandTotal();
-        if (this.view) this.view.querySelector(".props").style.backgroundColor = config.default.lineColours[this.level]; // Row colours from config
+        if (this.view.node) this.view.node.querySelector(".props").style.backgroundColor = config.default.lineColours[this.level]; // Row colours from config
         //exportJSON(budget, "exportoutput"); // for debugging
         break;
     }
 
     // Hide some things for the fields that have no children (leafs) because these get zeroed anyway
     const leafFields = [
-      this.viewProps.unitNumber,
-      this.viewProps.unitType,
-      this.viewProps.unitCost,
-      this.viewProps.frequency,
-      this.viewProps.cost
+      this.view.props.unitNumber,
+      this.view.props.unitType,
+      this.view.props.unitCost,
+      this.view.props.frequency,
+      this.view.props.cost
     ];
     for (let i = 0; i < leafFields.length; i++) {
       if (this.children && this.children.length) leafFields[i].classList.add("invisible");
@@ -881,9 +919,9 @@ class Line {
   }
 
   viewUpdateGrandTotal () {
-    if (this.root.viewGrandTotal) {
-      const grandTotal = this.root.viewGrandTotal.querySelector(".amount");
-      const currency = this.root.viewGrandTotal.querySelector(".currency");
+    if (this.root.view.grandTotal) {
+      const grandTotal = this.root.view.grandTotal.querySelector(".amount");
+      const currency = this.root.view.grandTotal.querySelector(".currency");
       grandTotal.textContent = formatN(this.root.total);
       currency.textContent = this.root.currency;
     }
@@ -903,25 +941,39 @@ class Line {
         n("span.col9", "Currency"),
         n("span.col10", "Tools")
       ]);
-      this.root.viewGrandTotal = n("footer.grandtotal", [
+      this.root.view.grandTotal = n("footer.grandtotal", [
         n("strong.title.alignright", "Grand Total"),
         n("strong.amount.alignright", this.root.total),
         n("strong.currency", this.root.currency)
       ]);
       document.body.appendChild(n("div.budget", [
         header,
-        n("ul.root", this.root.view),
-        this.root.viewGrandTotal,
-        n("button", "Export budget to Excel", {
+        n("ul.root", this.root.view.node),
+        this.root.view.grandTotal,
+        n("button", "Export to Excel", {
           click: function () {
             exportToExcel(budget);
           }
+        }),
+        n("button", "Export to JSON", {
+          click: function () {
+            let a = document.createElement('a');
+            document.body.appendChild(a);
+            a.style = 'display: none';
+            let data = exportToJSON(this);
+            let blob = new Blob([data], {type: "text/plain;charset=utf-8"});
+            let url = window.URL.createObjectURL(blob);
+            a.href = url;
+            a.download = this.title.split(' ').join('_') + '_' + new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').split('.')[0];
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+          }.bind(this)
         })
       ]));
       this.root.appendedToBody = true;
     } else log("The root of this budget has already been added to the page.", "error");
   }
-
 
   /* --- Methods --- */
 
@@ -936,11 +988,11 @@ class Line {
     options.frequency = options.frequency || newParent.frequency || 1;
     options.currency = options.currency || newParent.currency || this.root.currency;
 
-    // a parent doesn't need these:
-    this.unitNumber = 0;
-    this.unitType = "";
-    this.unitCost = 0;
-    this.frequency = 0;
+    // a parent doesn't need these (not using the setter to avoid updating "modified"):
+    this._unitNumber = 0;
+    this._unitType = "";
+    this._unitCost = 0;
+    this._frequency = 0;
 
     if (index) {
       if (typeof index === "string") {
@@ -950,7 +1002,7 @@ class Line {
       }
     }
 
-    const newLine = new Line(options);
+    const newLine = new Line(options, this.level + 1);
     Object.defineProperty(newLine, "parent", { get: () => newParent });
     if (newParent.children) {
       if (index && index < newParent.children.length) {
@@ -1047,7 +1099,7 @@ class Line {
   getLast (property = 'created', deepSearch, type = 'children', getFirst) {
     let items = deepSearch ? this.descendants : this[type];
     let map = [];
-    for (var i = 0; i < items.length; i++) {
+    for (let i = 0; i < items.length; i++) {
       map.push({
         index: items[i].index,
         property: items[i][property]

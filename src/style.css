@@ -48,8 +48,13 @@ body {
   --width-col7: 12ch; /* cost */
   --width-col8: 12ch; /* total */
   --width-col9: 5ch; /* currency */
-  --width-col10: 22ch; /* tools */
+  --width-col10: 26ch; /* tools */
   border-radius: var(--borderradius);
+  text-align: center;
+}
+
+.budget > .root {
+  text-align: left;
 }
 
 .budget > header {
@@ -65,10 +70,10 @@ body {
 
 .budget > button {
   width: 500px;
-  margin: 20px auto;
+  margin: 20px;
   padding: 12px;
   border: none;
-  display: block;
+  display: inline-block;
   font-family: inherit;
   font-size: 1.2rem;
   cursor: pointer;
@@ -158,6 +163,12 @@ li.line.level1 > .props {
 .props > .col10 > span {
   font-weight: bold;
   cursor: pointer;
+}
+
+.tools .button.add {
+  flex-grow: 1;
+  text-align: center;
+  justify-content: center;
 }
 
 ul.root > li.line > .props > .tools .button.delete,
