@@ -1,10 +1,10 @@
 'use strict';
 
-import ExcelJS from 'exceljs';
+//import ExcelJS from 'exceljs';
 
 /* ----- Variables ----- */
 
-let config = {
+const config = {
   roundDecimals: 2,
   showDecimals: 2,
   levelNames: [
@@ -30,10 +30,10 @@ let config = {
     warnBeforeDelete: false
   }
 }
-let syslog = JSON.parse(localStorage.getItem("syslog")) || [];
-let quietMode;
-window.symbols = {};
+let symbols = {};
 let rates = {};
+let syslog = JSON.parse(localStorage.getItem('syslog')) || [];
+let quietMode;
 
 /* ----- Functions ----- */
 
@@ -108,19 +108,19 @@ const log = function (message, type, timestamp) {
 }
 
 const saveRatesToLocalStorage = () => {
-  localStorage.setItem("rates", JSON.stringify(rates));
-  localStorage.setItem("symbols", JSON.stringify(symbols));
+  localStorage.setItem('rates', JSON.stringify(rates));
+  localStorage.setItem('symbols', JSON.stringify(symbols));
   localStorage.setItem(
-    "ratesUpdated", new Date().toISOString().split('T')[0]
+    'ratesUpdated', new Date().toISOString().split('T')[0]
   );
-  log("Exchange rates updated ("
-  + localStorage.getItem("ratesUpdated") + ")");
+  log('Exchange rates updated ('
+  + localStorage.getItem('ratesUpdated') + ')');
 };
 
 const fetchData = async base => {
   const requestURL = base ?
-    "https://api.exchangerate.host/latest?base=" + base :
-    "https://api.exchangerate.host/symbols";
+    'https://api.exchangerate.host/latest?base=' + base :
+    'https://api.exchangerate.host/symbols';
   await fetch(requestURL)
     .then(response => response.json())
     .then(response => {
@@ -128,7 +128,7 @@ const fetchData = async base => {
         rates[base] = response.rates;
       } else {
         symbols = response.symbols;
-        for (var code in symbols) fetchData(code);
+        for (let code in symbols) fetchData(code);
       }
     })
     .then(response => {
@@ -166,32 +166,32 @@ const start = function () {
     log('Back online.', 'info');
   });
 
-  const viewExport = n("div#export", [
-    n("span", "Show current data", {click: () => {
-      document.getElementById("exportoutput").classList.toggle("hidden");
+  const viewExport = n('div#export', [
+    n('span', 'Show current data', {click: () => {
+      document.getElementById('exportoutput').classList.toggle('hidden');
     }}),
-    n("pre#exportoutput.hidden")
+    n('pre#exportoutput.hidden')
   ]);
 
-  document.body.appendChild(n("header", [
-    n("h1", "DraftBudget"),
-    n("h2", "pre-alpha")
+  document.body.appendChild(n('header', [
+    n('h1', 'DraftBudget'),
+    n('h2', 'pre-alpha')
   ]));
 
   //document.body.appendChild(viewExport);
-  createBudget("budget", {title: "My new budget"})
+  createBudget('budget', {title: 'My new budget'})
   addMockData(budget);
 
-  document.body.appendChild(n("footer", [
-    //n("p", "Refresh the page if the above table is empty!</br>(The exchange rate loader script is not working properly yet.)")
-    n("span", "Debug:"),
-    n("strong", "Clear localStorage", {
+  document.body.appendChild(n('footer', [
+    //n('p', 'Refresh the page if the above table is empty!</br>(The exchange rate loader script is not working properly yet.)')
+    n('span', 'Debug:'),
+    n('strong', 'Clear localStorage', {
       click: function () {
         localStorage.clear();
-        log("Local Storage cleared.", "info")
+        log('Local Storage cleared.', 'info')
       }
     }),
-    n("strong", "Save rates and symbols to localStorage", {
+    n('strong', 'Save rates and symbols to localStorage', {
       click: function () {
         saveRatesToLocalStorage();
       }
@@ -204,8 +204,8 @@ const addMockData = function (b) {
     quietMode = true;
     b.add();
     b.getLine(1).add();
-    b.getLine("1.1").add();
-    b.getLine("1.1.1").add();
+    b.getLine('1.1').add();
+    b.getLine('1.1.1').add();
     /*
     b.add({currency: 'CHF'})
     b.add({currency: 'EUR'})
@@ -218,7 +218,7 @@ const addMockData = function (b) {
     })
     b.getLine(1).getLine(2).add();
     b.getLine(2).add();
-    b.getLine(2).getLine(1).add({unitCost: 333, unitType: "pcs", currency: 'GBP'});
+    b.getLine(2).getLine(1).add({unitCost: 333, unitType: 'pcs', currency: 'GBP'});
     b.getLine(2).getLine(1).add({unitCost: 444, currency: 'MXN'});
     b.getLine(2).getLine(1).add({unitCost: 555, currency: 'HKD'});
     */
@@ -232,11 +232,32 @@ const createBudget = (varName, options = {}) => {
   if (!window[varName]) {
     window[varName] = new Line(options);
     window[varName].appendToBody();
-  } else log("The variable \"" + varName + "\" is not available. Please choose a different variable name.", "error");
+  } else log('The variable \'' + varName + '\' is not available. Please choose a different variable name.', 'error');
 };
 
 const cloneLine = (line) => {
-  const clone = (typeof line === "string") ? JSON.parse(line) : line;
+  const isLine = line instanceof Line;
+  const clone = (isLine) ?
+    exportToJSON(line, true, ['level', 'title', 'unitNumber',
+      'unitType', 'unitCost', 'frequency', 'currency', 'start', 'end',
+      'created', 'modified']) :
+    line;
+  const newLine = new Line();
+  if (clone.children && clone.children.length) {
+    for (let i = 0; i < clone.children.length; i++) {
+      const cloneChild = cloneLine(clone.children[i]);
+      newLine.addLine(cloneChild);
+    }
+  }
+  for (let property in clone) {
+    if (clone.hasOwnProperty(property) && clone[property] &&
+        property !== 'level' && property !== 'index' && property !== 'children') {
+      newLine[property] = clone[property];
+    }
+  }
+  return newLine;
+  /*
+  const clone = (typeof line === 'string') ? JSON.parse(line) : line;
   const newLine = new Line();
   if (clone.children && clone.children.length) {
     for (let i = 0; i < clone.children.length; i++) {
@@ -247,31 +268,32 @@ const cloneLine = (line) => {
   for (let property in clone) {
     if (clone.hasOwnProperty(property) && clone[property]) {
       if ([
-        "created"
+        'created'
       ].includes(property)) {
         newLine[property] = clone[property];
       } else if ([
-        "_modified", "_currency", "_start", "_end",  "_title",
-        "_unitNumber", "_unitType", "_unitCost", "_frequency"
+        '_modified', '_currency', '_start', '_end',  '_title',
+        '_unitNumber', '_unitType', '_unitCost', '_frequency'
       ].includes(property)) {
-        newLine[property.replace("_", "")] = clone[property];
+        newLine[property.replace('_', '')] = clone[property];
       }
     }
   }
   return newLine;
+  */
 }
 
 const exportToJSON = (line, outputAsObject, propertiesToExport) => {
   propertiesToExport = propertiesToExport || [
-    "index", "title", "unitNumber", "unitType", "unitCost", "frequency", "cost",
-    "total", "currency", "start", "end", "created", "modified"
+    'index', 'title', 'unitNumber', 'unitType', 'unitCost', 'frequency', 'cost',
+    'total', 'currency', 'start', 'end', 'created', 'modified'
   ];
   const lineHasChildren = line.children && line.children.length;
   const exportObject = {};
   for (let i = 0; i < propertiesToExport.length; i++) {
     const property = propertiesToExport[i];
-    if (line[property] || property === "index") {
-      if (["unitNumber", "unitType", "unitCost", "frequency", "cost"]
+    if (line[property] || property === 'index') {
+      if (['unitNumber', 'unitType', 'unitCost', 'frequency', 'cost']
           .includes(property)) {
         if (!lineHasChildren) exportObject[property] = line[property];
       } else exportObject[property] = line[property];
@@ -287,6 +309,7 @@ const exportToJSON = (line, outputAsObject, propertiesToExport) => {
   return outputAsObject ? exportObject : JSON.stringify(exportObject);
 };
 
+/*
 const exportToExcel = (line) => {
   let workbook = new ExcelJS.Workbook();
   let sheet = workbook.addWorksheet('My Sheet', {
@@ -420,7 +443,7 @@ const exportToExcel = (line) => {
   });
 
 }
-
+*/
 
 /* ----- Line code ----- */
 
@@ -430,31 +453,31 @@ class Line {
 
     // The view needs to be initialised before looping through the options
     this.view = {
-      buttonDelete: n("span.button.delete", "Delete",
+      buttonDelete: n('span.button.delete', 'Delete',
         {click: function () {
             this.remove();
           }.bind(this)
         }
       ),
-      buttonAdd: n("span.button.add", "Add " + config.levelNames[level + 1],
+      buttonAdd: n('span.button.add', 'Add ' + config.levelNames[level + 1],
         {click: function (e) {
             e.stopImmediatePropagation(); // so that it doesn't fire removeInput() upon clicking on document
             this.add();
             const newLine = this.children[this.children.length - 1];
-            newLine.viewEdit("title");
+            newLine.viewEdit('title');
            }.bind(this)
         }
       ),
       props: {
-        index: n('div.col1.index', n("span", this.index)),
-        title: n('div.col2.title.editable', n("span", this.title)),
-        unitNumber: n('div.col3.unitnumber.editable', n("span", this.unitNumber)),
-        unitType: n('div.col4.unittype.editable', n("span", this.unitType)),
-        unitCost: n('div.col5.unitcost.alignright.editable', n("span", formatN(this.unitCost))),
-        frequency: n('div.col6.frequency.alignright.editable', n("span", this.frequency)),
-        cost: n('div.col7.cost.alignright', n("span", formatN(this.cost))),
-        total: n('div.col8.total.alignright', n("span", formatN(this.total))),
-        currency: n('div.col9.currency.editable', n("span", this.currency)),
+        index: n('div.col1.index', n('span', this.index)),
+        title: n('div.col2.title.editable', n('span', this.title)),
+        unitNumber: n('div.col3.unitnumber.editable', n('span', this.unitNumber)),
+        unitType: n('div.col4.unittype.editable', n('span', this.unitType)),
+        unitCost: n('div.col5.unitcost.alignright.editable', n('span', formatN(this.unitCost))),
+        frequency: n('div.col6.frequency.alignright.editable', n('span', this.frequency)),
+        cost: n('div.col7.cost.alignright', n('span', formatN(this.cost))),
+        total: n('div.col8.total.alignright', n('span', formatN(this.total))),
+        currency: n('div.col9.currency.editable', n('span', this.currency)),
         tools: n('div.col10.tools')
       }
     };
@@ -472,26 +495,26 @@ class Line {
 
     for (var property in this.view.props) {
       const propNode = this.view.props[property];
-      propNode.setAttribute("data-property", property);
-      if (propNode.classList.contains("editable")) {
+      propNode.setAttribute('data-property', property);
+      if (propNode.classList.contains('editable')) {
 
         /* Clicking on line properties to edit them */
-        propNode.addEventListener("click", function (e) {
+        propNode.addEventListener('click', function (e) {
           e.stopPropagation();
           const property = propNode.dataset.property; // need to re-set this
           this.viewEdit(property);
         }.bind(this));
-      } else if (property == "total" || property == "cost") {
-        propNode.addEventListener("click", function (e) {
+      } else if (property == 'total' || property == 'cost') {
+        propNode.addEventListener('click', function (e) {
           e.stopPropagation();
-          if (!this.children || !this.children.length) this.viewEdit("unitCost");
+          if (!this.children || !this.children.length) this.viewEdit('unitCost');
         }.bind(this));
       }
     }
 
-    this.view.children = n("ul");
-    this.view.node = n("li.line", [
-      n("div.props", [
+    this.view.children = n('ul');
+    this.view.node = n('li.line', [
+      n('div.props', [
         this.view.props.index,
         this.view.props.title,
         this.view.props.unitNumber,
@@ -526,35 +549,35 @@ class Line {
   set title (title) {
     if (title && title.trim() && title !== this.title) this._title = title;
     this.modified = new Date().getTime();
-    this.viewUpdate(false, [ "title" ]);
+    this.viewUpdate(false, [ 'title' ]);
   }
 
   set unitNumber (unitNumber) {
     this._unitNumber = unitNumber;
     this.modified = new Date().getTime();
-    this.viewUpdate(false, [ "unitNumber", "cost" ]);
-    this.viewUpdate("up", [ "total" ]);
+    this.viewUpdate(false, [ 'unitNumber', 'cost' ]);
+    this.viewUpdate('up', [ 'total' ]);
   }
 
   set unitType (unitType) {
     this._unitType = unitType;
-    if (unitType == "ls" || unitType == "lumpsum") this.unitNumber = 1;
+    if (unitType == 'ls' || unitType == 'lumpsum') this.unitNumber = 1;
     this.modified = new Date().getTime();
-    this.viewUpdate(false, [ "unitType" ]);
+    this.viewUpdate(false, [ 'unitType' ]);
   }
 
   set unitCost (unitCost) {
     this._unitCost = unitCost;
     this.modified = new Date().getTime();
-    this.viewUpdate(false, [ "unitCost", "cost" ]);
-    this.viewUpdate("up", [ "total" ]);
+    this.viewUpdate(false, [ 'unitCost', 'cost' ]);
+    this.viewUpdate('up', [ 'total' ]);
   }
 
   set frequency (frequency) {
     this._frequency = frequency;
     this.modified = new Date().getTime();
-    this.viewUpdate(false, [ "frequency" ]);
-    this.viewUpdate("up", [ "total" ]);
+    this.viewUpdate(false, [ 'frequency' ]);
+    this.viewUpdate('up', [ 'total' ]);
   }
 
   set currency (currency) {
@@ -562,8 +585,8 @@ class Line {
       this._currency = currency;
       this.modified = new Date().getTime();
     }
-    this.viewUpdate(false, [ "currency" ]);
-    this.viewUpdate("up", [ "total" ]);
+    this.viewUpdate(false, [ 'currency' ]);
+    this.viewUpdate('up', [ 'total' ]);
   }
 
   set category (category) {
@@ -594,7 +617,7 @@ class Line {
   }
 
   get defaultTitle () {
-    return this.levelName + "-" + this.lineNumber;
+    return this.levelName + '-' + this.lineNumber;
   }
 
   get title () {
@@ -759,72 +782,72 @@ class Line {
   viewAdd (newLine, index) {
     this.view.children.appendChild(newLine.view.node);
     newLine.view.node.dataset.level = this.level + 1;
-    newLine.view.node.classList.add("level" + (this.level + 1));
-    if (this.level + 2 == config.levelNames.length) newLine.view.node.classList.add("hide-add-button");
+    newLine.view.node.classList.add('level' + (this.level + 1));
+    if (this.level + 2 == config.levelNames.length) newLine.view.node.classList.add('hide-add-button');
     newLine.viewUpdate();
-    newLine.parent.viewUpdate("up");
+    newLine.parent.viewUpdate('up');
   }
 
   viewEdit (property) {
     const propNode = this.view.props[property];
-    const propNodeInput = propNode.querySelector("input");
+    const propNodeInput = propNode.querySelector('input');
     if (!propNodeInput) {
 
-      const previousEditing = this.root.view.node.querySelector(".editing input");
-      const pressEnter = new KeyboardEvent("keydown", { key: "Enter" });
+      const previousEditing = this.root.view.node.querySelector('.editing input');
+      const pressEnter = new KeyboardEvent('keydown', { key: 'Enter' });
       if (previousEditing) previousEditing.dispatchEvent(pressEnter);
-      propNode.classList.add("editing");
+      propNode.classList.add('editing');
 
       const originalValue = this[property];
 
-      const removeInput = (cancelEdit) => {
-        document.removeEventListener("click", removeInput);
-        this[property] = cancelEdit ? originalValue : inputEdit.value;
+      const removeInput = (saveEdit) => {
+        document.removeEventListener('click', removeInput);
+        this[property] = saveEdit ? inputEdit.value : originalValue;
         inputEdit.remove();
-        propNode.classList.remove("editing");
-        log("Editing " + this.index + " " + property +  " finished, changes " +
-          (cancelEdit ? "discarded." : "saved."), "info");
+        propNode.classList.remove('editing');
+        log('Editing ' + this.index + ' ' + property +  ' finished, changes ' +
+          (saveEdit ? 'saved.' : 'discarded.'), 'info');
       };
-      document.addEventListener("click", removeInput);
+      document.addEventListener('click', removeInput);
 
-      const inputEdit = n("input"
-                      + "|value=" + originalValue
-                      + "|placeholder=" + this.defaultTitle,
-                      "", {
+      const inputEdit = n('input'
+                      + '|value=' + originalValue
+                      + '|placeholder=' + this.defaultTitle,
+                      '', {
         input: function (event) {
           this[property] = event.target.value;
         }.bind(this),
         keydown: function (event) {
           switch (event.key) {
-            case "Tab":
+            case 'Tab':
               event.preventDefault();
-              const editables = this.root.view.node.querySelectorAll(".editable:not(.invisible)");
+              const editables = this.root.view.node.querySelectorAll('.editable:not(.invisible)');
               const thisIndex = Array.from(editables).indexOf(propNode);
               const nextIndex = (editables.length - 1) !== thisIndex ?
                                 thisIndex + 1 : 0;
-              removeInput();
+              removeInput(true);
               editables[nextIndex].click(); // simulating a click is the easiest at this point and it does the job
               break;
-            case "ArrowUp":
-            case "ArrowDown":
+            case 'ArrowUp':
+            case 'ArrowDown':
               event.preventDefault();
-              const sameColumn = this.root.view.node.querySelectorAll(".editable:not(.invisible)[data-property=" + property + "]");
+              const sameColumn = this.root.view.node.querySelectorAll('.editable:not(.invisible)[data-property=' + property + ']');
               const thisIndexCol = Array.from(sameColumn).indexOf(propNode);
               const prevIndexCol = (thisIndexCol !== 0) ? thisIndexCol - 1 :
                                    sameColumn.length - 1;
               const nextIndexCol = (sameColumn.length - 1) !== thisIndexCol ?
                                    thisIndexCol + 1 : 0;
-              const indexToSelect = (event.key == "ArrowUp") ? prevIndexCol : nextIndexCol;
-              removeInput();
+              const indexToSelect = (event.key == 'ArrowUp') ? prevIndexCol : nextIndexCol;
+              removeInput(true);
               sameColumn[indexToSelect].click();
               break;
-            case "Enter":
-              event.preventDefault();
-              removeInput();
-              break;
-            case "Escape":
+            case 'Enter':
               event.preventDefault();
               removeInput(true);
+              break;
+            case 'Escape':
+              event.preventDefault();
+              removeInput(false);
               break;
             default:
           }
@@ -833,74 +856,74 @@ class Line {
       propNode.appendChild(inputEdit);
       inputEdit.focus();
       inputEdit.select();
-      log("Editing " + this.index + " " + property);
+      log('Editing ' + this.index + ' ' + property);
     } else propNodeInput.focus();
   }
 
   viewRemove () {
     this.view.node.remove();
-    this.parent.viewUpdate("updown");
+    this.parent.viewUpdate('updown');
   }
 
   viewUpdate (recursion, properties) {
     switch (recursion) {
-      case "down": // downward recursion (all children and all their descendats...)
+      case 'down': // downward recursion (all children and all their descendats...)
         this.viewUpdate(false, properties);
         if (this.children) {
           for (let i = 0; i < this.children.length; i++) {
-            this.children[i].viewUpdate("down", properties);
+            this.children[i].viewUpdate('down', properties);
           }
         }
         break;
-      case "up": // upward recursion (parent and all of its ancestors)
+      case 'up': // upward recursion (parent and all of its ancestors)
         this.viewUpdate(false, properties);
-        if (this.parent) this.parent.viewUpdate("up")
+        if (this.parent) this.parent.viewUpdate('up')
         break;
-      case "updown":
-        this.viewUpdate("down", properties);
-        this.viewUpdate("up", properties);
+      case 'updown':
+        this.viewUpdate('down', properties);
+        this.viewUpdate('up', properties);
         break;
-      case "side":
+      case 'side':
         this.viewUpdate(false, properties);
         console.log(this.siblings)
         for (var i = 0; i < this.siblings.length; i++) {
-          this.siblings[i].viewUpdate("down", properties);
+          this.siblings[i].viewUpdate('down', properties);
         }
-      default: // if no recursive option specified or it's "false"
+      default: // if no recursive option specified or it's 'false'
         if (properties) {
           for (let i = 0; i < properties.length; i++) {
             const property = properties[i];
             if (this.view.props[property]) {
               let newValue = (
-                property == "unitCost" ||
-                property == "cost" ||
-                property == "total"
+                property == 'unitCost' ||
+                property == 'cost' ||
+                property == 'total'
               ) ? formatN(this[property]) : this[property];
-              this.view.props[property].querySelector("span").textContent = newValue;
+              this.view.props[property].querySelector('span').textContent = newValue;
               if (
-                property == "unitCost" ||
-                property == "unitNumber" ||
-                property == "frequency"
+                property == 'unitCost' ||
+                property == 'unitNumber' ||
+                property == 'frequency'
               ) {
-                this.viewUpdate(false, ["cost", "total"]);
+                this.viewUpdate(false, ['cost', 'total']);
               }
             }
           }
         } else {
           for (let property in this.view.props) {
-            if (property !== "tools" && this.view.props.hasOwnProperty(property)) {
+            if (property !== 'tools' && this.view.props.hasOwnProperty(property)) {
               let newValue = (
-                property == "unitCost" ||
-                property == "cost" ||
-                property == "total"
+                property == 'unitCost' ||
+                property == 'cost' ||
+                property == 'total'
               ) ? formatN(this[property]) : this[property];
-              this.view.props[property].querySelector("span").textContent = newValue;
+              this.view.props[property].querySelector('span').textContent = newValue;
             }
           }
         }
         this.viewUpdateGrandTotal();
-        if (this.view.node) this.view.node.querySelector(".props").style.backgroundColor = config.default.lineColours[this.level]; // Row colours from config
-        //exportJSON(budget, "exportoutput"); // for debugging
+        if (this.view.node) this.view.node.querySelector('.props').style.backgroundColor = config.default.lineColours[this.level]; // Row colours from config
+        //exportJSON(budget, 'exportoutput'); // for debugging
         break;
     }
 
@@ -913,15 +936,15 @@ class Line {
       this.view.props.cost
     ];
     for (let i = 0; i < leafFields.length; i++) {
-      if (this.children && this.children.length) leafFields[i].classList.add("invisible");
-      else leafFields[i].classList.remove("invisible");
+      if (this.children && this.children.length) leafFields[i].classList.add('invisible');
+      else leafFields[i].classList.remove('invisible');
     }
   }
 
   viewUpdateGrandTotal () {
     if (this.root.view.grandTotal) {
-      const grandTotal = this.root.view.grandTotal.querySelector(".amount");
-      const currency = this.root.view.grandTotal.querySelector(".currency");
+      const grandTotal = this.root.view.grandTotal.querySelector('.amount');
+      const currency = this.root.view.grandTotal.querySelector('.currency');
       grandTotal.textContent = formatN(this.root.total);
       currency.textContent = this.root.currency;
     }
@@ -929,42 +952,44 @@ class Line {
 
   appendToBody () {
     if (!this.root.appendedToBody) {
-      const header = n("header", [
-        n("span.col1", "Index"),
-        n("span.col2", "Title"),
-        n("span.col3", "Unit Number"),
-        n("span.col4", "Unit Type"),
-        n("span.col5", "Unit Cost"),
-        n("span.col6", "Frequency"),
-        n("span.col7", "Cost"),
-        n("span.col8", "Total"),
-        n("span.col9", "Currency"),
-        n("span.col10", "Tools")
+      const header = n('header', [
+        n('span.col1', 'Index'),
+        n('span.col2', 'Title'),
+        n('span.col3', 'Unit Number'),
+        n('span.col4', 'Unit Type'),
+        n('span.col5', 'Unit Cost'),
+        n('span.col6', 'Frequency'),
+        n('span.col7', 'Cost'),
+        n('span.col8', 'Total'),
+        n('span.col9', 'Currency'),
+        n('span.col10', 'Tools')
       ]);
-      this.root.view.grandTotal = n("footer.grandtotal", [
-        n("strong.title.alignright", "Grand Total"),
-        n("strong.amount.alignright", this.root.total),
-        n("strong.currency", this.root.currency)
+      this.root.view.grandTotal = n('footer.grandtotal', [
+        n('strong.title.alignright', 'Grand Total'),
+        n('strong.amount.alignright', this.root.total),
+        n('strong.currency', this.root.currency)
       ]);
-      document.body.appendChild(n("div.budget", [
+      document.body.appendChild(n('div.budget', [
         header,
-        n("ul.root", this.root.view.node),
+        n('ul.root', this.root.view.node),
         this.root.view.grandTotal,
-        n("button", "Export to Excel", {
+        n('button', 'Export to Excel', {
           click: function () {
             exportToExcel(budget);
           }
         }),
-        n("button", "Export to JSON", {
+        n('button', 'Export to JSON', {
           click: function () {
             let a = document.createElement('a');
             document.body.appendChild(a);
             a.style = 'display: none';
             let data = exportToJSON(this);
-            let blob = new Blob([data], {type: "text/plain;charset=utf-8"});
+            let blob = new Blob([data], {type: 'text/plain;charset=utf-8'});
             let url = window.URL.createObjectURL(blob);
             a.href = url;
-            a.download = this.title.split(' ').join('_') + '_' + new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').split('.')[0];
+            a.download = this.title.split(' ').join('_') + '_' +
+              new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').split('.')[0]
+              + '.json';
             a.click();
             window.URL.revokeObjectURL(url);
             a.remove();
@@ -972,7 +997,7 @@ class Line {
         })
       ]));
       this.root.appendedToBody = true;
-    } else log("The root of this budget has already been added to the page.", "error");
+    } else log('The root of this budget has already been added to the page.', 'error');
   }
 
   /* --- Methods --- */
@@ -983,27 +1008,27 @@ class Line {
 
     // let the child inherit the parent's cost data if any
     options.unitNumber = options.unitNumber || newParent.unitNumber || 1;
-    options.unitType = options.unitType || newParent.unitType || "ls";
+    options.unitType = options.unitType || newParent.unitType || 'ls';
     options.unitCost = options.unitCost || newParent.unitCost || 0;
     options.frequency = options.frequency || newParent.frequency || 1;
     options.currency = options.currency || newParent.currency || this.root.currency;
 
-    // a parent doesn't need these (not using the setter to avoid updating "modified"):
+    // a parent doesn't need these (not using the setter to avoid updating '.modified'):
     this._unitNumber = 0;
-    this._unitType = "";
+    this._unitType = '';
     this._unitCost = 0;
     this._frequency = 0;
 
     if (index) {
-      if (typeof index === "string") {
-        let map = index.split(".");
+      if (typeof index === 'string') {
+        let map = index.split('.');
         index = Number(map.pop());
-        newParent = this.getLine(map.join("."));
+        newParent = this.getLine(map.join('.'));
       }
     }
 
     const newLine = new Line(options, this.level + 1);
-    Object.defineProperty(newLine, "parent", { get: () => newParent });
+    Object.defineProperty(newLine, 'parent', { get: () => newParent });
     if (newParent.children) {
       if (index && index < newParent.children.length) {
         newParent.children.splice(index - 1, 0, newLine);
@@ -1011,20 +1036,20 @@ class Line {
     } else newParent.children = [newLine];
 
     newParent.viewAdd(newLine);
-    if (!quietMode) log("New line added at " + newLine.index);
+    if (!quietMode) log('New line added at ' + newLine.index);
   }
 
   addLine (newLine, index) {
     if (newLine instanceof Line) {
       let newParent = this;
-      Object.defineProperty(newLine, "parent", { get: () => newParent });
+      Object.defineProperty(newLine, 'parent', { get: () => newParent });
       if (newParent.children) {
         if (index && index < this.children.length) {
           newParent.children.splice(index - 1, 0, newLine);
         } else this.children.push(newLine);
       } else newParent.children = [newLine];
       newParent.viewAdd(newLine, index);
-    } else log(newLine.toString() + " is not a Line object", "error");
+    } else log(newLine.toString() + ' is not a Line object', 'error');
   }
 
   remove (quietMode) {
@@ -1038,6 +1063,9 @@ class Line {
   }
 
   move (newIndex, addAsChild) {
+    const clone = cloneLine(this);
+    console.log(clone);
+    /*
     const oldIndex = this.index;
     const indexMap = addAsChild ? [] : newIndex.toString().split('.');
     const parentIndex = addAsChild ? newIndex : indexMap.slice(0, -1).join('.');
@@ -1045,9 +1073,10 @@ class Line {
     if (newParent) {
       newParent.addLine(cloneLine(JSON.stringify(this)));
       this.remove();
-      newParent.viewUpdate("down");
+      newParent.viewUpdate('down');
       log('Line ' + oldIndex + ' moved to line ' + newIndex, 'info');
-    } else log("There is no line at the index" + parentIndex, "error");
+    } else log('There is no line at the index' + parentIndex, 'error');
+    */
   }
 
   recurse (line, callback) {
@@ -1149,7 +1178,7 @@ class Line {
         this[variable] = options[variable];
       }
     }
-    this.viewUpdate("up", Object.keys(options));
+    this.viewUpdate('up', Object.keys(options));
   }
 
 }
