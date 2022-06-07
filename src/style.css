@@ -234,6 +234,10 @@ ul.root > li.line > .props > .index {
   text-align: right;
 }
 
+.overhead > span {
+  padding-right: 50px;
+}
+
 /* --- Grand total row --- */
 
 .grandtotal {

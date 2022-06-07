@@ -1,5 +1,4 @@
 'use strict';
-
 //import ExcelJS from 'exceljs';
 
 /* ----- Variables ----- */
@@ -39,25 +38,25 @@ let quietMode;
 
 // Node generator, syntax: n('tag#id.class|attribute=value', content/[content], {'event': function() {...})
 const n = (tag, content, listener) => {
-  var el = document.createElement(tag.split('#')[0].split('.')[0].split('|').shift());
+  let el = document.createElement(tag.split('#')[0].split('.')[0].split('|').shift() || 'div');
   if (tag.split('#')[1]) el.id = tag.split('#')[1].split('.')[0].split('|')[0];
   if (tag.split('.')[1]) el.classList.add(...tag.split('.').slice(1).join('.').split('|')[0].split('.'));
   if (tag.split('|')[1]) {
-      var attrTemp = tag.split('|').slice(1);
-      for (var i = 0; i < attrTemp.length; i++) el.setAttribute(attrTemp[i].split('=')[0], attrTemp[i].split('=')[1]);
+      let attrTemp = tag.split('|').slice(1);
+      for (let i = 0; i < attrTemp.length; i++) el.setAttribute(attrTemp[i].split('=')[0], attrTemp[i].split('=')[1]);
   }
   if (content) {
       if (typeof content === 'string' || typeof content === 'number') {
         el.insertAdjacentHTML('beforeend', content);
       }
-      else if (content.constructor === Array) for (var i = 0; i < content.length; i++) {
+      else if (content.constructor === Array) for (let i = 0; i < content.length; i++) {
           if (typeof content === 'string' || typeof content === 'number') {
             el.insertAdjacentHTML('beforeend', content[i]);
           } else el.appendChild(content[i]);
       }
       else el.appendChild(content);
   }
-  if (listener) for (var event in listener) if (listener.hasOwnProperty(event)) el.addEventListener(event, listener[event]);
+  if (listener) for (let event in listener) if (listener.hasOwnProperty(event)) el.addEventListener(event, listener[event]);
   return el;
 }
 
@@ -166,19 +165,11 @@ const start = function () {
     log('Back online.', 'info');
   });
 
-  const viewExport = n('div#export', [
-    n('span', 'Show current data', {click: () => {
-      document.getElementById('exportoutput').classList.toggle('hidden');
-    }}),
-    n('pre#exportoutput.hidden')
-  ]);
-
   document.body.appendChild(n('header', [
     n('h1', 'DraftBudget'),
     n('h2', 'pre-alpha')
   ]));
 
-  //document.body.appendChild(viewExport);
   createBudget('budget', {title: 'My new budget'})
   addMockData(budget);
 
@@ -479,11 +470,13 @@ class Line {
         total: n('div.col8.total.alignright', n('span', formatN(this.total))),
         currency: n('div.col9.currency.editable', n('span', this.currency)),
         tools: n('div.col10.tools')
-      }
+      },
+      children: n('ul.children'),
+      overhead: n('ul.overhead')
     };
     this.view.props.tools.append(this.view.buttonDelete, this.view.buttonAdd);
 
-    for (var v in options) {
+    for (let v in options) {
       if (options.hasOwnProperty(v) && v !== 'children') this[v] = options[v];
     }
     this.currency = this.currency || config.default.currency;
@@ -493,7 +486,7 @@ class Line {
     this.created = this.created || new Date().getTime();
     this.modified = this.modified || this.created;
 
-    for (var property in this.view.props) {
+    for (let property in this.view.props) {
       const propNode = this.view.props[property];
       propNode.setAttribute('data-property', property);
       if (propNode.classList.contains('editable')) {
@@ -512,7 +505,6 @@ class Line {
       }
     }
 
-    this.view.children = n('ul');
     this.view.node = n('li.line', [
       n('div.props', [
         this.view.props.index,
@@ -526,7 +518,8 @@ class Line {
         this.view.props.currency,
         this.view.props.tools
       ]),
-      this.view.children
+      this.view.children,
+      this.view.overhead
     ]);
   }
 
@@ -650,7 +643,7 @@ class Line {
     return this.unitNumber * this.unitCost;
   }
 
-  get total () {
+  get totalWithoutOverhead () {
     let total = 0;
     if (this.children && this.children.length) {
       for (var i = 0; i < this.children.length; i++) {
@@ -660,6 +653,16 @@ class Line {
         } else total += this.children[i].total;
       }
     } else total = this.cost ? this.cost * this.frequency : 0;
+    return total;
+  }
+
+  get total () {
+    let total = this.totalWithoutOverhead;
+    if (this.overhead && this.overhead.length) {
+      for (let i = 0; i < this.overhead.length; i++) {
+        total = total + this.overhead[i].cost;
+      }
+    }
     return total;
   }
 
@@ -867,7 +870,7 @@ class Line {
 
   viewUpdate (recursion, properties) {
     switch (recursion) {
-      case 'down': // downward recursion (all children and all their descendats...)
+      case 'down': // downward recursion (all children and all their descendants...)
         this.viewUpdate(false, properties);
         if (this.children) {
           for (let i = 0; i < this.children.length; i++) {
@@ -886,7 +889,7 @@ class Line {
       case 'side':
         this.viewUpdate(false, properties);
         console.log(this.siblings)
-        for (var i = 0; i < this.siblings.length; i++) {
+        for (let i = 0; i < this.siblings.length; i++) {
           this.siblings[i].viewUpdate('down', properties);
         }
       default: // if no recursive option specified or it's 'false'
@@ -898,7 +901,7 @@ class Line {
                 property == 'unitCost' ||
                 property == 'cost' ||
                 property == 'total'
-              ) ? formatN(this[property]) : this[property];
+              ) ? formatN(this[property]) : this[property]; // format these as numbers
               this.view.props[property].querySelector('span').textContent = newValue;
               if (
                 property == 'unitCost' ||
@@ -923,7 +926,6 @@ class Line {
         }
         this.viewUpdateGrandTotal();
         if (this.view.node) this.view.node.querySelector('.props').style.backgroundColor = config.default.lineColours[this.level]; // Row colours from config
-        //exportJSON(budget, 'exportoutput'); // for debugging
         break;
     }
 
@@ -947,6 +949,30 @@ class Line {
       const currency = this.root.view.grandTotal.querySelector('.currency');
       grandTotal.textContent = formatN(this.root.total);
       currency.textContent = this.root.currency;
+    }
+  }
+
+  viewAddOverhead (newOverhead) {
+    this.view.overhead.classList.add('hasoverhead');
+    const viewNewOverhead = n('li.overhead', [
+      n('span', 'Overhead for ' + this.index),
+      n('span.title', newOverhead.title),
+      n('span.rate', newOverhead.rate),
+      n('span.cost', formatN(newOverhead.cost)),
+      n('span', this.currency)
+    ]);
+    this.view.overhead.appendChild(viewNewOverhead);
+  }
+
+  viewUpdateOverhead (index, properties) {
+    if (this.overhead[index]) {
+      if (properties) {
+        for (let i = 0; i < properties.length; i++) {
+          const property = properties[i];
+          this.view.overhead.querySelector('.' + property).textContent = this.overhead[property];
+        }
+      } else this.viewUpdateOverhead(index, Object.keys(this.overhead[index]));
+      this.viewUpdate('up', [ 'total' ]);
     }
   }
 
@@ -1143,6 +1169,39 @@ class Line {
       let index = !getFirst ? map[0].index : map[map.length - 1].index;
       return this.root.getLine(index);
     } else return;
+  }
+
+  addOverhead (title, rate) {
+    const newOverhead = {
+      title: title,
+      rate: rate
+    };
+    
+    Object.defineProperty(newOverhead, 'cost', { get: function() {
+      return this.totalWithoutOverhead * newOverhead.rate;
+    }.bind(this)});
+
+    if (this.overhead) this.overhead.push(newOverhead);
+    else this.overhead = [newOverhead];
+
+    this.viewAddOverhead(newOverhead);
+  }
+
+  removeOverhead (index) {
+    if (this.overhead && this.overhead[index]) {
+      this.overhead.splice(index - 1, 1);
+      log('Overhead ' + index + ' from line ' + this.index + ' deleted.', 'info');
+    } else log('Line ' + this.index + ' has no overhead at index ' + index, 'error');
+    this.viewUpdate('up', [ 'total' ]);
+  }
+
+  updateOverhead (index, title, rate) {
+    if (this.overhead && this.overhead[index]) {
+      if (title) this.overhead[index].title = title;
+      if (rate) this.overhead[index].rate = rate;
+      //this.viewUpdate('up', [ 'total' ]);
+      this.viewUpdateOverhead(index);
+    }
   }
 
   addCategory (category) {
