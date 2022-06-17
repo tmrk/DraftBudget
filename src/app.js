@@ -2,7 +2,7 @@
 //import ExcelJS from 'exceljs';
 
 /* ----- Variables ----- */
-
+ 
 const config = {
   roundDecimals: 2,
   showDecimals: 2,
@@ -925,7 +925,7 @@ class Line {
           }
         }
         this.viewUpdateGrandTotal();
-        if (this.view.node) this.view.node.querySelector('.props').style.backgroundColor = config.default.lineColours[this.level]; // Row colours from config
+        //if (this.view.node) this.view.node.querySelector('.props').style.backgroundColor = config.default.lineColours[this.level]; // Row colours from config
         break;
     }
 

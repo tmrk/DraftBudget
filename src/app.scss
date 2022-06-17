@@ -1,0 +1,101 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+
+.hidden {
+  display: none!important;
+}
+
+.invisible {
+  visibility: hidden!important;
+}
+
+.alignright {
+  text-align: right;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  height: 100%;
+  font-family: 'Roboto Mono', monospace;
+  background: #000;
+  color: rgba(255,255,255,0.9);
+}
+
+.root {
+  margin: 0 20px;
+  background: rgb(20,20,20);
+}
+
+.line {
+  display: block;
+
+  .level1 > .props { background: rgb(40,40,40); }
+  .level2 > .props { background: rgb(60,60,60); }
+  .level3 > .props { background: rgb(80,80,80); }
+  .level4 > .props { background: rgb(100,100,100); }
+  
+  .props {
+    margin: 2px 0;
+    display: flex;
+
+    .index {
+      flex: 2;
+    }
+
+    .title {
+      flex-grow: 4;
+    }
+
+    .unitnumber {
+      flex: 1;
+    }
+
+    .unitnumber {
+      flex: 1;
+    }
+
+    .unittype {
+      flex: 1;
+    }
+
+    .unitcost {
+      flex: 1;
+    }
+    
+    .frequency {
+      flex: 1;
+    }
+    
+    .cost {
+      flex: 2;
+    }
+
+    .total {
+      flex: 2;
+    }
+
+    .currency {
+      flex: 1;
+    }
+    
+    .tools {
+      flex: 3;
+    }
+
+    .children {}
+
+    .overhead {}
+
+  }
+}
