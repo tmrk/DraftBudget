@@ -34,5 +34,6 @@
   "dependencies": {
     "exceljs": "^4.3.0",
     "util": "^0.12.4"
-  }
+  },
+  "main": "webpack.config.js"
 }

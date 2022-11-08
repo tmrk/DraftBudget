@@ -1,5 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap');
-
+@import url('https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;500;600;700;800&display=swap');
 * {
   margin: 0;
   padding: 0;
@@ -14,7 +13,7 @@
 }
 
 .invisible {
-  visibility: hidden!important;
+  /*visibility: hidden!important;*/
 }
 
 .alignright {
@@ -27,14 +26,22 @@ html {
 
 body {
   height: 100%;
-  font-family: 'Roboto Mono', monospace;
+  font-family: 'Inconsolata', monospace;
+  font-size: 12px;
+  font-weight: 600;
   background: #000;
   color: rgba(255,255,255,0.9);
 }
 
+.budget {
+
+  header .props {
+    text-align: center;
+  }
+}
+
 .root {
-  margin: 0 20px;
-  background: rgb(20,20,20);
+  & > .line > .props { background: rgb(20,20,20); }
 }
 
 .line {
@@ -49,48 +56,60 @@ body {
     margin: 2px 0;
     display: flex;
 
-    .index {
-      flex: 2;
+    & > div {
+      padding: 0 1ch;
+      /*
+      outline: 1px solid rgba(255,255,255,0.4);
+      outline-style: inset;
+      */
+
+      & > span {
+        padding: 5px 0;
+        display: inline-block;
+      }
     }
 
-    .title {
-      flex-grow: 4;
+    .col1, .index {
+      width: 7ch;
     }
 
-    .unitnumber {
-      flex: 1;
+    .col2, .title {
+      flex-grow: 1;
     }
 
-    .unitnumber {
-      flex: 1;
+    .col3, .unitnumber {
+      width: 4ch;
+      text-align: center;
     }
 
-    .unittype {
-      flex: 1;
+    .col4, .unittype {
+      width: 5ch;
+      text-align: center;
     }
 
-    .unitcost {
-      flex: 1;
-    }
-    
-    .frequency {
-      flex: 1;
-    }
-    
-    .cost {
-      flex: 2;
+    .col5, .unitcost {
+      width: 13ch;
     }
 
-    .total {
-      flex: 2;
+    .col6, .frequency {
+      width: 2ch;
+      text-align: center;
     }
 
-    .currency {
-      flex: 1;
+    .col7, .cost {
+      width: 15ch;
     }
-    
-    .tools {
-      flex: 3;
+
+    .col8, .total {
+      width: 15ch;
+    }
+
+    .col9, .currency {
+      width: 3ch;
+    }
+
+    .col10, .tools {
+      width: 23ch;
     }
 
     .children {}

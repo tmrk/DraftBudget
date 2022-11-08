@@ -978,18 +978,18 @@ class Line {
 
   appendToBody () {
     if (!this.root.appendedToBody) {
-      const header = n('header', [
-        n('span.col1', 'Index'),
-        n('span.col2', 'Title'),
-        n('span.col3', 'Unit Number'),
-        n('span.col4', 'Unit Type'),
-        n('span.col5', 'Unit Cost'),
-        n('span.col6', 'Frequency'),
-        n('span.col7', 'Cost'),
-        n('span.col8', 'Total'),
-        n('span.col9', 'Currency'),
-        n('span.col10', 'Tools')
-      ]);
+      const header = n('header.line', n('.props', [
+        n('.col1', n('span', 'Index')),
+        n('.col2', n('span', 'Title')),
+        n('.col3', n('span', 'Unit Number')),
+        n('.col4', n('span', 'Unit Type')),
+        n('.col5', n('span', 'Unit Cost')),
+        n('.col6', n('span', 'Frequency')),
+        n('.col7', n('span', 'Cost')),
+        n('.col8', n('span', 'Total')),
+        n('.col9', n('span', 'Currency')),
+        n('.col10', n('span', 'Tools'))
+      ]));
       this.root.view.grandTotal = n('footer.grandtotal', [
         n('strong.title.alignright', 'Grand Total'),
         n('strong.amount.alignright', this.root.total),
