@@ -1,4 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap');
+
+// === SCSS Variables ===
+$font-family: 'Roboto Mono', monospace;
+$bg-color: #000;
+$text-color: rgba(255, 255, 255, 0.9);
+$text-muted: rgba(255, 255, 255, 0.6);
+$border-color: rgba(255, 255, 255, 0.3);
+$hover-bg: rgba(255, 255, 255, 0.5);
+
+// === Reset ===
 * {
   margin: 0;
   padding: 0;
@@ -8,113 +18,348 @@
   cursor: default;
 }
 
+// === Utility Classes ===
 .hidden {
-  display: none!important;
+  display: none !important;
 }
 
 .invisible {
-  /*visibility: hidden!important;*/
+  visibility: hidden;
 }
 
 .alignright {
   text-align: right;
 }
 
+// === Base Elements ===
 html {
   height: 100%;
 }
 
 body {
   height: 100%;
-  font-family: 'Inconsolata', monospace;
-  font-size: 12px;
-  font-weight: 600;
-  background: #000;
-  color: rgba(255,255,255,0.9);
+  font-family: $font-family;
+  background: $bg-color;
+  color: $text-color;
 }
 
+// === Budget Container ===
 .budget {
+  width: 100%;
+  max-width: 1800px;
+  margin: 20px auto;
+  display: block;
+  text-align: center;
 
-  header .props {
-    text-align: center;
+  // CSS Custom Properties for column widths
+  --borderradius: 0;
+  --width-col1: 9ch;   // index
+  --width-col2: 14ch;  // title
+  --width-col3: 4ch;   // unitNumber
+  --width-col4: 5ch;   // unitType
+  --width-col5: 10ch;  // unitCost
+  --width-col6: 3ch;   // frequency
+  --width-col7: 12ch;  // cost
+  --width-col8: 12ch;  // total
+  --width-col9: 5ch;   // currency
+  --width-col10: 26ch; // tools
+
+  border-radius: var(--borderradius);
+
+  // Column widths
+  .col1 { width: var(--width-col1); }
+  .col2 { width: var(--width-col2); flex-grow: 1; }
+  .col3 { width: var(--width-col3); }
+  .col4 { width: var(--width-col4); }
+  .col5 { width: var(--width-col5); }
+  .col6 { width: var(--width-col6); }
+  .col7 { width: var(--width-col7); }
+  .col8 { width: var(--width-col8); }
+  .col9 { width: var(--width-col9); }
+  .col10 { width: var(--width-col10); }
+
+  // All columns overflow hidden
+  *[class^="col"] {
+    overflow: hidden;
+
+    > span {
+      height: 100%;
+      padding: 1ch 1ch;
+      display: block;
+    }
+  }
+
+  // Root list
+  > .root {
+    text-align: left;
+  }
+
+  // Header
+  > header {
+    border-top-left-radius: var(--borderradius);
+    border-top-right-radius: var(--borderradius);
+    background: rgba(255, 255, 255, 0.15);
+
+    > span {
+      text-align: center;
+    }
+
+    > .col10 {
+      justify-content: center;
+    }
+  }
+
+  // Footer
+  > footer {
+    height: 70px;
+    border-bottom-left-radius: var(--borderradius);
+    border-bottom-right-radius: var(--borderradius);
+  }
+
+  // Buttons
+  > button {
+    width: 500px;
+    margin: 20px;
+    padding: 12px;
+    border: none;
+    display: inline-block;
+    font-family: inherit;
+    font-size: 1.2rem;
+    cursor: pointer;
+
+    &:hover {
+      background: green;
+      color: #fff;
+    }
   }
 }
 
-.root {
-  & > .line > .props { background: rgb(20,20,20); }
-}
+// === Line Props Row ===
+.props {
+  margin: 2px 0;
+  padding: 0 0 0 2ch;
+  display: flex;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.5);
 
-.line {
-  display: block;
+  > * {
+    color: $text-muted;
+  }
 
-  .level1 > .props { background: rgb(40,40,40); }
-  .level2 > .props { background: rgb(60,60,60); }
-  .level3 > .props { background: rgb(80,80,80); }
-  .level4 > .props { background: rgb(100,100,100); }
-  
-  .props {
-    margin: 2px 0;
-    display: flex;
+  > .editable {
+    > span {
+      color: $text-color;
+      cursor: pointer;
 
-    & > div {
-      padding: 0 1ch;
-      /*
-      outline: 1px solid rgba(255,255,255,0.4);
-      outline-style: inset;
-      */
-
-      & > span {
-        padding: 5px 0;
-        display: inline-block;
+      &:hover {
+        background: $hover-bg;
       }
     }
 
-    .col1, .index {
-      width: 7ch;
+    &.editing {
+      cursor: text;
+
+      &:hover {
+        background: none;
+      }
+    }
+  }
+
+  > div.editing > span {
+    display: none;
+  }
+
+  // Tools column
+  > .col10 {
+    margin-left: 2ch;
+    padding-left: calc(2ch - 1px);
+    border-left: 1px solid $border-color;
+    display: flex;
+
+    > span {
+      font-weight: bold;
+      cursor: pointer;
     }
 
-    .col2, .title {
-      flex-grow: 1;
+    > .delete:hover {
+      background-color: red;
+      color: #fff;
     }
 
-    .col3, .unitnumber {
-      width: 4ch;
-      text-align: center;
+    > .add:hover {
+      background-color: green;
+      color: #fff;
+    }
+  }
+}
+
+.budget > header {
+  padding: 0 0 0 2ch;
+  display: flex;
+  align-items: center;
+
+  > .col10 {
+    margin-left: 2ch;
+    padding-left: calc(2ch - 1px);
+    border-left: 1px solid $border-color;
+    display: flex;
+  }
+}
+
+// === Root List Lines ===
+ul.root > li.line {
+  > .props {
+    height: 70px;
+    display: flex;
+    align-items: stretch;
+    font-weight: bold;
+
+    > div > span {
+      padding-top: 0;
+      padding-bottom: 0;
+      display: flex;
+      align-items: center;
     }
 
-    .col4, .unittype {
-      width: 5ch;
-      text-align: center;
+    > div.alignright > span {
+      justify-content: flex-end;
     }
 
-    .col5, .unitcost {
-      width: 13ch;
+    // Hide index on root line
+    > .index {
+      visibility: hidden;
     }
 
-    .col6, .frequency {
-      width: 2ch;
-      text-align: center;
+    // Hide delete on root line
+    > .tools .button.delete {
+      display: none;
     }
+  }
+}
 
-    .col7, .cost {
-      width: 15ch;
+// Level 1 lines are bold
+li.line.level1 > .props {
+  font-weight: bold;
+}
+
+// Hide add button when flagged
+.hide-add-button .tools .button.add {
+  display: none;
+}
+
+// Tools add button
+.tools .button.add {
+  flex-grow: 1;
+  text-align: center;
+  justify-content: center;
+}
+
+// === Editing Mode ===
+.editing input {
+  width: 100%;
+  height: calc(100% - 1ch);
+  padding: 1ch 1ch;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: inherit;
+  display: flex;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+.editing.alignright input {
+  text-align: right;
+}
+
+// === Overhead ===
+.overhead > span {
+  padding-right: 50px;
+}
+
+// === Grand Total Row ===
+.grandtotal {
+  padding: 0 calc(var(--width-col9) + var(--width-col10));
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: flex-end;
+
+  .title {
+    display: flex;
+    align-items: center;
+  }
+
+  .amount {
+    width: 10ch;
+    padding: 0 1ch;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    user-select: text;
+    -webkit-user-select: text;
+    cursor: text;
+  }
+
+  .currency {
+    width: 3ch;
+    padding-left: 1ch;
+    display: flex;
+    align-items: center;
+  }
+}
+
+// === Export Section ===
+#export {
+  margin: 20px 0 0;
+  text-align: center;
+
+  > span {
+    padding: 10px;
+    display: inline-block;
+    cursor: pointer;
+
+    &:hover {
+      color: yellow;
     }
+  }
+}
 
-    .col8, .total {
-      width: 15ch;
+// === Pre/Code Blocks ===
+pre {
+  background: rgba(255, 255, 255, 0.1);
+  max-height: 400px;
+  padding: 20px;
+  border-radius: 20px;
+  line-height: 1.2rem;
+  text-align: left;
+  overflow-x: auto;
+}
+
+// === Body Header/Footer ===
+body > header {
+  margin: 40px auto;
+  text-align: center;
+
+  h2 {
+    color: $text-muted;
+  }
+}
+
+body > footer {
+  height: 100px;
+  display: flex;
+  gap: 40px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: $text-muted;
+
+  strong {
+    cursor: pointer;
+
+    &:hover {
+      color: yellow;
     }
-
-    .col9, .currency {
-      width: 3ch;
-    }
-
-    .col10, .tools {
-      width: 23ch;
-    }
-
-    .children {}
-
-    .overhead {}
-
   }
 }
