@@ -4,10 +4,8 @@
   "description": "A basic budget creator app written in vanilla JavaScript",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "webpack",
-    "serve": "webpack serve",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "dev": "webpack serve --config webpack.dev.js",
+    "build": "webpack --config webpack.prod.js"
   },
   "repository": {
     "type": "git",
@@ -22,18 +20,19 @@
   "homepage": "https://tmrk.github.io/DraftBudget/",
   "devDependencies": {
     "css-loader": "^6.7.1",
-    "gh-pages": "^4.0.0",
+    "html-webpack-plugin": "^5.6.0",
+    "mini-css-extract-plugin": "^2.9.0",
     "sass": "^1.52.3",
     "sass-loader": "^13.0.0",
     "style-loader": "^3.3.1",
     "terser-webpack-plugin": "^5.3.1",
     "webpack": "^5.73.0",
     "webpack-cli": "^4.9.2",
-    "webpack-dev-server": "^4.9.0"
+    "webpack-dev-server": "^4.9.0",
+    "webpack-merge": "^5.10.0"
   },
   "dependencies": {
     "exceljs": "^4.3.0",
     "util": "^0.12.4"
-  },
-  "main": "webpack.config.js"
+  }
 }
