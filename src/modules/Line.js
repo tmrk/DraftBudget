@@ -225,7 +225,8 @@ export class Line {
   }
 
   get cost () {
-    return this.unitNumber * this.unitCost;
+    const raw = this.unitNumber * this.unitCost;
+    return parseFloat(raw.toFixed(config.roundDecimals)) || 0;
   }
 
   get totalWithoutOverhead () {
@@ -237,7 +238,10 @@ export class Line {
           total += convert(this.children[i].total, base, this.currency);
         } else total += this.children[i].total;
       }
-    } else total = this.cost ? this.cost * this.frequency : 0;
+    } else {
+      const raw = this.cost * (this.frequency || 1);
+      total = parseFloat(raw.toFixed(config.roundDecimals)) || 0;
+    }
     return total;
   }
 
@@ -248,7 +252,7 @@ export class Line {
         total = total + this.overhead[i].cost;
       }
     }
-    return total;
+    return parseFloat(total.toFixed(config.roundDecimals)) || 0;
   }
 
   get level () {

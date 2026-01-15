@@ -39,12 +39,12 @@ export const columnToLetter = function (column) {
   return letter;
 };
 
-export const formatN = function (number, showDecimals = config.showDecimals, if0) {
-  if (number) {
-    let parts = parseFloat(number).toFixed(showDecimals).toString().split('.');
-    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    return parts.join('.');
-  } else return if0 || 0;
+export const formatN = function (number, showDecimals = config.showDecimals) {
+  // Always format with specified decimals, even for 0
+  const num = parseFloat(number) || 0;
+  let parts = num.toFixed(showDecimals).toString().split('.');
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return parts.join('.');
 };
 
 export const dateISO = function (date) {
