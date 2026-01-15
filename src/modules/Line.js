@@ -6,6 +6,7 @@ import { n, formatN } from './dom.js';
 import { convert, symbols } from './fx.js';
 import { exportToJSON, cloneLine } from './serialize.js';
 import { scheduleSave } from './persistence.js';
+import { exportToExcel } from './excel.js';
 
 export class Line {
 
@@ -592,10 +593,16 @@ export class Line {
         n('ul.root', this.root.view.node),
         this.root.view.grandTotal,
         n('button', 'Export to Excel', {
-          click: function () {
-            // exportToExcel(budget); // Commented out - ExcelJS not implemented
-            log('Excel export not implemented', 'warn');
-          }
+          click: async function () {
+            try {
+              log('Exporting to Excel...');
+              const filename = await exportToExcel(this);
+              log('Exported to ' + filename, 'info');
+            } catch (e) {
+              log('Excel export failed: ' + e.message, 'error');
+              console.error(e);
+            }
+          }.bind(this)
         }),
         n('button', 'Export to JSON', {
           click: function () {

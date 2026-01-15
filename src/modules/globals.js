@@ -2,6 +2,7 @@
 
 import { createBudget } from '../start.js';
 import { exportToJSON, cloneLine } from './serialize.js';
+import { exportToExcel } from './excel.js';
 import { convert, prewarmDefault, prewarmAll, ratesByBase, symbols } from './fx.js';
 import { config } from './config.js';
 import { syslog, log, getQuietMode, setQuietMode } from './log.js';
@@ -13,6 +14,7 @@ export function exposeGlobals() {
   // Functions
   window.createBudget = createBudget;
   window.exportToJSON = exportToJSON;
+  window.exportToExcel = exportToExcel;
   window.cloneLine = cloneLine;
   window.convert = convert;
   window.loadRates = prewarmDefault;  // Alias for backwards compat

@@ -31,5 +31,7 @@
     "webpack-dev-server": "^4.9.0",
     "webpack-merge": "^5.10.0"
   },
-  "dependencies": {}
+  "dependencies": {
+    "exceljs": "^4.4.0"
+  }
 }
