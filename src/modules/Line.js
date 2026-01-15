@@ -5,22 +5,36 @@ import { log, getQuietMode } from './log.js';
 import { n, formatN } from './dom.js';
 import { convert, symbols } from './fx.js';
 import { exportToJSON, cloneLine } from './serialize.js';
+import { scheduleSave } from './persistence.js';
 
 export class Line {
 
+  // Maximum allowed level (levelNames.length - 1, since first is Budget)
+  static get maxLevel() {
+    return config.levelNames.length - 1;
+  }
+
   constructor (options = {}, level = 0) {
+
+    // Check if this level can have children
+    const canAddChildren = level < Line.maxLevel;
+    const nextLevelName = canAddChildren ? config.levelNames[level + 1] : null;
 
     // The view needs to be initialised before looping through the options
     this.view = {
-      buttonDelete: n('span.button.delete', 'Delete',
+      buttonDelete: n('span.button.delete', '',
         {click: function () {
             this.remove();
           }.bind(this)
         }
       ),
-      buttonAdd: n('span.button.add', 'Add ' + config.levelNames[level + 1],
+      buttonAdd: n('span.button.add', '',
         {click: function (e) {
             e.stopImmediatePropagation(); // so that it doesn't fire removeInput() upon clicking on document
+            if (!this.canAddChildren()) {
+              log('Cannot add children to ' + this.levelName + ' (max level reached)', 'warn');
+              return;
+            }
             this.add();
             const newLine = this.children[this.children.length - 1];
             newLine.viewEdit('title');
@@ -95,6 +109,8 @@ export class Line {
 
   set modified (date) {
     this._modified = date;
+    // Auto-save to localStorage (debounced)
+    scheduleSave();
   }
 
   set start (date) {
@@ -348,6 +364,14 @@ export class Line {
     return currencies.sort();
   }
 
+  /**
+   * Check if this line can have children added to it
+   * Returns false if at max level (levelNames.length - 1)
+   */
+  canAddChildren () {
+    return this.level < Line.maxLevel;
+  }
+
   /* --- View methods --- */
 
   viewAdd (newLine, index) {
@@ -547,16 +571,16 @@ export class Line {
   appendToBody () {
     if (!this.root.appendedToBody) {
       const header = n('header.line', n('.props', [
-        n('.col1', n('span', 'Index')),
+        n('.col1', n('span', '#')),
         n('.col2', n('span', 'Title')),
-        n('.col3', n('span', 'Unit Number')),
-        n('.col4', n('span', 'Unit Type')),
-        n('.col5', n('span', 'Unit Cost')),
-        n('.col6', n('span', 'Frequency')),
+        n('.col3', n('span', 'Qty')),
+        n('.col4', n('span', 'Type')),
+        n('.col5', n('span', 'Rate')),
+        n('.col6', n('span', 'Fr')),
         n('.col7', n('span', 'Cost')),
         n('.col8', n('span', 'Total')),
-        n('.col9', n('span', 'Currency')),
-        n('.col10', n('span', 'Tools'))
+        n('.col9', n('span', 'Cur')),
+        n('.col10', n('span', ''))
       ]));
       this.root.view.grandTotal = n('footer.grandtotal', [
         n('strong.title.alignright', 'Grand Total'),
@@ -598,6 +622,12 @@ export class Line {
   /* --- Methods --- */
 
   add (options = {}, index) {
+
+    // Check if adding is allowed at this level
+    if (!this.canAddChildren()) {
+      log('Cannot add children to ' + this.levelName + ' (max level ' + Line.maxLevel + ' reached)', 'error');
+      return null;
+    }
 
     let newParent = this;
 
@@ -680,6 +710,24 @@ export class Line {
     if (line.children) for (var i = 0; i < line.children.length; i++) {
       this.recurse(line.children[i], callback);
     }
+  }
+
+  /**
+   * Refresh level classes on all nodes in the tree
+   * Call this after loading from localStorage to fix level assignments
+   */
+  refreshLevels () {
+    this.recurse(this, (line) => {
+      // Remove old level classes
+      for (let i = 0; i < 10; i++) {
+        line.view.node.classList.remove('level' + i);
+      }
+      // Add correct level class
+      line.view.node.classList.add('level' + line.level);
+      line.view.node.dataset.level = line.level;
+      // Update index display
+      line.viewUpdate(false, ['index']);
+    });
   }
 
   getDuration (measure) {

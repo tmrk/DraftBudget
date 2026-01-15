@@ -1,12 +1,49 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap');
+// === JetBrains Mono Font (embedded) ===
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('./fonts/JetBrainsMono-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('./fonts/JetBrainsMono-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
 
 // === SCSS Variables ===
-$font-family: 'Roboto Mono', monospace;
-$bg-color: #000;
-$text-color: rgba(255, 255, 255, 0.9);
-$text-muted: rgba(255, 255, 255, 0.6);
-$border-color: rgba(255, 255, 255, 0.3);
-$hover-bg: rgba(255, 255, 255, 0.5);
+$font-family: 'JetBrains Mono', monospace;
+$font-size: 13px;
+$bg-color: #0a0a0a;
+$text-color: rgba(255, 255, 255, 0.92);
+$text-muted: rgba(255, 255, 255, 0.5);
+$accent-green: rgba(0, 200, 80, 0.9);
+$accent-red: rgba(220, 60, 60, 0.9);
+
+// Gap size for grid dividers
+$gap-size: 1px;
+
+// Level background colors (applied to cells)
+$level-colors: (
+  header: rgba(255, 255, 255, 0.08),
+  root: rgba(255, 255, 255, 0.04),
+  level1: rgba(255, 255, 255, 0.08),
+  level2: rgba(255, 255, 255, 0.12),
+  level3: rgba(255, 255, 255, 0.16),
+  level4: rgba(255, 255, 255, 0.20)
+);
+
+// Material Icons as data URIs
+$icon-delete: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'%3E%3Cpath d='M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z'/%3E%3C/svg%3E");
+$icon-add: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'%3E%3Cpath d='M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z'/%3E%3C/svg%3E");
+
+// Header icons
+$icon-tag: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff' opacity='0.6'%3E%3Cpath d='M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z'/%3E%3C/svg%3E");
+$icon-title: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff' opacity='0.6'%3E%3Cpath d='M5 4v3h5.5v12h3V7H19V4z'/%3E%3C/svg%3E");
 
 // === Reset ===
 * {
@@ -16,6 +53,7 @@ $hover-bg: rgba(255, 255, 255, 0.5);
   user-select: none;
   -webkit-user-select: none;
   cursor: default;
+  box-sizing: border-box;
 }
 
 // === Utility Classes ===
@@ -23,7 +61,8 @@ $hover-bg: rgba(255, 255, 255, 0.5);
   display: none !important;
 }
 
-.invisible {
+// Invisible hides only the span text, not the cell background
+.invisible > span {
   visibility: hidden;
 }
 
@@ -39,110 +78,114 @@ html {
 body {
   height: 100%;
   font-family: $font-family;
+  font-size: $font-size;
+  line-height: 1.4;
   background: $bg-color;
   color: $text-color;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 // === Budget Container ===
 .budget {
   width: 100%;
-  max-width: 1800px;
-  margin: 20px auto;
+  max-width: 1600px;
+  margin: 0 auto;
   display: block;
   text-align: center;
 
-  // CSS Custom Properties for column widths
-  --borderradius: 0;
-  --width-col1: 9ch;   // index
-  --width-col2: 14ch;  // title
-  --width-col3: 4ch;   // unitNumber
-  --width-col4: 5ch;   // unitType
-  --width-col5: 10ch;  // unitCost
-  --width-col6: 3ch;   // frequency
-  --width-col7: 12ch;  // cost
-  --width-col8: 12ch;  // total
-  --width-col9: 5ch;   // currency
-  --width-col10: 26ch; // tools
-
-  border-radius: var(--borderradius);
+  // CSS Custom Properties for column widths (ch-based)
+  // Index: 9ch fits "1.1.1.1" (7 chars + 2ch padding buffer)
+  --col-index: 9ch;
+  --col-title: 20ch;
+  --col-qty: 5ch;
+  --col-type: 6ch;
+  --col-rate: 9ch;
+  --col-freq: 4ch;
+  --col-cost: 10ch;
+  --col-total: 10ch;
+  --col-curr: 5ch;
+  --col-tools: 56px;
+  --row-height: 3.2ch;
+  --header-height: 4ch;
 
   // Column widths
-  .col1 { width: var(--width-col1); }
-  .col2 { width: var(--width-col2); flex-grow: 1; }
-  .col3 { width: var(--width-col3); }
-  .col4 { width: var(--width-col4); }
-  .col5 { width: var(--width-col5); }
-  .col6 { width: var(--width-col6); }
-  .col7 { width: var(--width-col7); }
-  .col8 { width: var(--width-col8); }
-  .col9 { width: var(--width-col9); }
-  .col10 { width: var(--width-col10); }
-
-  // All columns overflow hidden
-  *[class^="col"] {
-    overflow: hidden;
-
-    > span {
-      height: 100%;
-      padding: 1ch 1ch;
-      display: block;
-    }
-  }
+  .col1 { width: var(--col-index); min-width: var(--col-index); }
+  .col2 { width: var(--col-title); flex-grow: 1; }
+  .col3 { width: var(--col-qty); min-width: var(--col-qty); }
+  .col4 { width: var(--col-type); min-width: var(--col-type); }
+  .col5 { width: var(--col-rate); min-width: var(--col-rate); }
+  .col6 { width: var(--col-freq); min-width: var(--col-freq); }
+  .col7 { width: var(--col-cost); min-width: var(--col-cost); }
+  .col8 { width: var(--col-total); min-width: var(--col-total); }
+  .col9 { width: var(--col-curr); min-width: var(--col-curr); }
+  .col10 { width: var(--col-tools); min-width: var(--col-tools); }
 
   // Root list
   > .root {
     text-align: left;
   }
 
-  // Header
-  > header {
-    border-top-left-radius: var(--borderradius);
-    border-top-right-radius: var(--borderradius);
-    background: rgba(255, 255, 255, 0.15);
-
-    > span {
-      text-align: center;
-    }
-
-    > .col10 {
-      justify-content: center;
-    }
-  }
-
   // Footer
   > footer {
-    height: 70px;
-    border-bottom-left-radius: var(--borderradius);
-    border-bottom-right-radius: var(--borderradius);
+    height: 5ch;
   }
 
   // Buttons
   > button {
-    width: 500px;
-    margin: 20px;
-    padding: 12px;
-    border: none;
+    width: 40ch;
+    margin: 1.5ch;
+    padding: 1ch 2ch;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: transparent;
     display: inline-block;
     font-family: inherit;
-    font-size: 1.2rem;
+    font-size: 0.9em;
+    color: $text-color;
     cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    transition: all 0.15s ease;
 
     &:hover {
-      background: green;
+      background: rgba(0, 200, 80, 0.15);
+      border-color: $accent-green;
       color: #fff;
     }
   }
 }
 
-// === Line Props Row ===
+// === Props Row (shared between header and data rows) ===
 .props {
-  margin: 2px 0;
-  padding: 0 0 0 2ch;
+  margin: 0 0 $gap-size 0; // Bottom margin creates row gap
+  padding: 0;
+  height: var(--row-height);
   display: flex;
-  align-items: center;
-  background-color: rgba(255, 255, 255, 0.5);
+  align-items: stretch;
+  gap: $gap-size;
+  background: $bg-color; // Gap color shows through
 
-  > * {
+  // All columns - cells with individual backgrounds
+  > *[class^="col"] {
+    display: flex;
+    align-items: stretch; // Make children fill height
+    overflow: hidden;
+    background-color: map-get($level-colors, level1); // Default, overridden by level classes
+
+    // Span fills entire cell, text is padded inside
+    > span {
+      width: 100%;
+      padding: 0 0.6ch;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  // Muted text for non-editable columns
+  > *:not(.editable) {
     color: $text-muted;
   }
 
@@ -150,120 +193,178 @@ body {
     > span {
       color: $text-color;
       cursor: pointer;
+      transition: background 0.1s ease;
 
+      // Hover fills entire cell
       &:hover {
-        background: $hover-bg;
-      }
-    }
-
-    &.editing {
-      cursor: text;
-
-      &:hover {
-        background: none;
+        background: rgba(255, 255, 255, 0.1);
       }
     }
   }
 
+  // Hide span when editing
   > div.editing > span {
     display: none;
   }
 
   // Tools column
   > .col10 {
-    margin-left: 2ch;
-    padding-left: calc(2ch - 1px);
-    border-left: 1px solid $border-color;
+    padding: 0;
     display: flex;
+    justify-content: stretch;
+    align-items: stretch;
+    gap: $gap-size;
+    background: $bg-color; // Gap shows through between buttons
+
+    > span.button {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background-color 0.1s ease;
+      background-size: 18px 18px;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-color: map-get($level-colors, level1); // Match row level
+    }
+
+    > .delete {
+      background-image: $icon-delete;
+      opacity: 0.4;
+
+      &:hover {
+        background-color: $accent-red;
+        opacity: 1;
+      }
+    }
+
+    > .add {
+      background-image: $icon-add;
+      opacity: 0.4;
+
+      &:hover {
+        background-color: $accent-green;
+        opacity: 1;
+      }
+    }
+  }
+}
+
+// === Header Row ===
+.budget > header.line > .props {
+  height: var(--header-height);
+  background: $bg-color;
+
+  > *[class^="col"] {
+    background-color: rgba(255, 255, 255, 0.06);
+
+    > span {
+      justify-content: center; // Center header titles
+      text-align: center;
+      font-weight: 700;
+      font-size: 0.85em;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: $text-muted;
+    }
+  }
+
+  // Empty tools column in header
+  > .col10 {
+    background-color: rgba(255, 255, 255, 0.06);
+  }
+}
+
+// === Root Line (Budget) ===
+ul.root > li.line > .props {
+  height: 5ch;
+
+  > div {
+    background-color: map-get($level-colors, root);
 
     > span {
       font-weight: bold;
-      cursor: pointer;
-    }
-
-    > .delete:hover {
-      background-color: red;
-      color: #fff;
-    }
-
-    > .add:hover {
-      background-color: green;
-      color: #fff;
     }
   }
-}
 
-.budget > header {
-  padding: 0 0 0 2ch;
-  display: flex;
-  align-items: center;
+  > div.alignright > span {
+    text-align: right;
+  }
 
+  // Hide index on root line
+  > .index > span {
+    visibility: hidden;
+  }
+
+  // Tools on root line
   > .col10 {
-    margin-left: 2ch;
-    padding-left: calc(2ch - 1px);
-    border-left: 1px solid $border-color;
-    display: flex;
-  }
-}
-
-// === Root List Lines ===
-ul.root > li.line {
-  > .props {
-    height: 70px;
-    display: flex;
-    align-items: stretch;
-    font-weight: bold;
-
-    > div > span {
-      padding-top: 0;
-      padding-bottom: 0;
-      display: flex;
-      align-items: center;
-    }
-
-    > div.alignright > span {
-      justify-content: flex-end;
-    }
-
-    // Hide index on root line
-    > .index {
-      visibility: hidden;
+    > span.button {
+      background-color: map-get($level-colors, root);
     }
 
     // Hide delete on root line
-    > .tools .button.delete {
+    > .button.delete {
       display: none;
     }
   }
 }
 
-// Level 1 lines are bold
-li.line.level1 > .props {
+// === Level-specific backgrounds (applied to cells) ===
+@for $i from 1 through 4 {
+  li.line.level#{$i} > .props {
+    > *[class^="col"] {
+      background-color: map-get($level-colors, level#{$i});
+    }
+
+    > .col10 > span.button {
+      background-color: map-get($level-colors, level#{$i});
+    }
+  }
+}
+
+// Level 1 is bold
+li.line.level1 > .props > div > span {
   font-weight: bold;
 }
 
-// Hide add button when flagged
+// === Column alignments for data rows ===
+// Right-aligned: Rate (col5), Cost (col7), Total (col8)
+li.line > .props {
+  > .col5 > span,
+  > .col7 > span,
+  > .col8 > span {
+    justify-content: flex-end;
+    text-align: right;
+  }
+
+  // Center-aligned: Qty (col3), Type (col4), Fr (col6), Cur (col9)
+  > .col3 > span,
+  > .col4 > span,
+  > .col6 > span,
+  > .col9 > span {
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+// Hide add button on max level (level 4 = Sub-activity)
+li.line.level4 > .props > .col10 > .button.add,
 .hide-add-button .tools .button.add {
   display: none;
 }
 
-// Tools add button
-.tools .button.add {
-  flex-grow: 1;
-  text-align: center;
-  justify-content: center;
-}
-
-// === Editing Mode ===
+// === Editing Mode - Input fills entire cell ===
 .editing input {
   width: 100%;
-  height: calc(100% - 1ch);
-  padding: 1ch 1ch;
+  height: 100%;
+  padding: 0 0.6ch; // Match span padding for text alignment
   border: none;
   outline: none;
+  background: #ffffff;
   font-family: inherit;
   font-size: inherit;
-  display: flex;
+  color: #000000;
   user-select: text;
   -webkit-user-select: text;
   cursor: text;
@@ -275,91 +376,124 @@ li.line.level1 > .props {
 
 // === Overhead ===
 .overhead > span {
-  padding-right: 50px;
+  padding-right: 4ch;
 }
 
 // === Grand Total Row ===
 .grandtotal {
-  padding: 0 calc(var(--width-col9) + var(--width-col10));
-  background: rgba(255, 255, 255, 0.1);
+  height: 4.5ch;
+  padding: 0;
+  margin-top: $gap-size;
+  background: rgba(255, 255, 255, 0.08);
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  font-weight: bold;
+  gap: 0;
 
   .title {
-    display: flex;
-    align-items: center;
+    padding: 0 2ch;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 0.9em;
   }
 
   .amount {
     width: 10ch;
     padding: 0 1ch;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
+    text-align: right;
     user-select: text;
     -webkit-user-select: text;
     cursor: text;
   }
 
   .currency {
-    width: 3ch;
-    padding-left: 1ch;
-    display: flex;
-    align-items: center;
+    width: var(--col-curr);
+    padding: 0 0.6ch;
+  }
+
+  // Spacer for tools column alignment
+  &::after {
+    content: '';
+    width: var(--col-tools);
+    min-width: var(--col-tools);
   }
 }
 
 // === Export Section ===
 #export {
-  margin: 20px 0 0;
+  margin: 2ch 0 0;
   text-align: center;
 
   > span {
-    padding: 10px;
+    padding: 1ch;
     display: inline-block;
     cursor: pointer;
 
     &:hover {
-      color: yellow;
+      color: $accent-green;
     }
   }
 }
 
 // === Pre/Code Blocks ===
 pre {
-  background: rgba(255, 255, 255, 0.1);
-  max-height: 400px;
-  padding: 20px;
-  border-radius: 20px;
-  line-height: 1.2rem;
+  background: rgba(255, 255, 255, 0.05);
+  max-height: 30ch;
+  padding: 2ch;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  line-height: 1.5;
   text-align: left;
   overflow-x: auto;
 }
 
 // === Body Header/Footer ===
 body > header {
-  margin: 40px auto;
+  margin: 0 auto;
+  padding: 2.5ch 0;
   text-align: center;
+  background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+
+  h1 {
+    font-size: 1.8em;
+    font-weight: 400;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+  }
 
   h2 {
     color: $text-muted;
+    font-size: 0.8em;
+    font-weight: 400;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    margin-top: 0.5ch;
   }
 }
 
 body > footer {
-  height: 100px;
+  height: 6ch;
+  margin-top: 2ch;
+  padding: 0 2ch;
   display: flex;
-  gap: 40px;
+  gap: 4ch;
   align-items: center;
   justify-content: center;
   text-align: center;
   color: $text-muted;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.85em;
 
   strong {
     cursor: pointer;
+    padding: 0.5ch 1ch;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
 
     &:hover {
-      color: yellow;
+      color: $accent-green;
+      border-color: rgba(0, 200, 80, 0.3);
     }
   }
 }

@@ -1,42 +1,55 @@
-# DraftBudget modernisation – Plan first
+# DraftBudget
 
-Work mode: PLAN FIRST. Do not edit code until the plan is approved by me in-chat.
+A budget creator app with hierarchical line items and currency conversion.
 
-Context:
-- Current app is vanilla JS (scrambled but working) with `app.js`, `index.html`, `style.css`.
-- Repo already uses webpack (possibly dated).
-- App must remain a STATIC site deployable to GitHub Pages.
+## Project Structure
 
-Hard requirements (do not violate):
-1) Preserve existing core logic and UX behaviour:
-   - hierarchical lines (parents sum children), totals computed on the fly
-   - overhead logic preserved
-   - keyboard editing behaviour preserved
-   - DOM layout stays functionally the same (columns, alignment, etc.)
-2) Preserve console-first control:
-   - keep a stable window-level API (globals) so everything can be controlled from DevTools.
-   - keep `window.budget` + an alias `window.b`
-   - expose at least: createBudget, exportToJSON, cloneLine, convert, loadRates, symbols, rates
-3) Replace the FX backend (api.exchangerate.host is not suitable):
-   - use a free, keyless service (Frankfurter is acceptable)
-   - must be deterministic: FX init completes before UI starts
-   - conversion returns numbers (or NaN), never strings
-4) Convert `style.css` → SCSS and integrate into webpack build.
-5) Provide local dev workflow:
-   - `npm run dev` via webpack-dev-server
-   - Claude must use Chrome integration to visually verify alignment, right-justified columns, and editing.
-6) Provide GitHub Pages deploy via Actions:
-   - build to `dist/`
-   - deploy `dist/` as Pages artifact
+```
+src/
+├── index.js           # Entry point
+├── start.js           # Bootstrap (createBudget, start)
+├── app.scss           # Styles (SCSS)
+├── index.html         # HTML template
+└── modules/
+    ├── Line.js        # Line class (model)
+    ├── fx.js          # FX service (Frankfurter API)
+    ├── dom.js         # DOM helpers (n() function)
+    ├── serialize.js   # exportToJSON, cloneLine
+    ├── config.js      # Configuration
+    ├── log.js         # Logging utilities
+    └── globals.js     # Window API exposure
+```
 
-Plan deliverables required before any edits:
-- Proposed target file/folder structure (justified)
-- Dependency changes (exact npm packages)
-- Webpack changes (dev + prod, SCSS pipeline, asset paths for Pages)
-- FX module design + caching scheme (localStorage keys, update frequency)
-- Global window API design (exact names, what’s on window vs under namespace)
-- Migration steps in small commits, with checkpoints and rollback strategy
-- Verification checklist (commands + Chrome visual checks)
+## Development
 
-After plan approval:
-- Implement in small commits. After each commit run build + dev and verify in Chrome.
+```bash
+npm run dev    # Start dev server at localhost:8080
+npm run build  # Production build to dist/
+```
+
+## Window API
+
+Available in browser console:
+- `window.budget` / `window.b` - Main budget Line instance
+- `createBudget(name, options)` - Create new budget
+- `exportToJSON(line)` - Export to JSON
+- `cloneLine(line)` - Clone a line
+- `convert(amount, from, to)` - Currency conversion
+- `loadRates()` - Load FX rates
+- `rates` - Cached exchange rates by base currency
+- `symbols` - Currency symbols/names
+- `config` - App configuration
+- `quietMode` - Toggle logging (getter/setter)
+
+## FX Module
+
+Uses Frankfurter API (`api.frankfurter.dev/v1`) with per-base caching:
+- Rates cached in localStorage as `ratesByBase`
+- 24-hour cache TTL based on `fetchedAt` timestamp
+- `convert()` returns NaN for missing rates (triggers async fetch)
+- In-flight guard prevents duplicate requests
+- Debounced re-render after async rate fetch
+
+## Deployment
+
+Automatic via GitHub Actions on push to `main` branch.

@@ -1,9 +1,11 @@
 # DraftBudget
 
-A basic JavaScript implementation of a budget creator app with a recursive Class model. 
+A basic JavaScript implementation of a budget creator app with a recursive Class model.
 
-It also features a currency converter using the exchangerate.host API.
+It also features a currency converter using the Frankfurter API.
 
 Currently in active development.
 
-Demo: https://tmrk.github.io/DraftBudget/
+## Demo
+
+https://tmrk.github.io/DraftBudget/
