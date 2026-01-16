@@ -680,7 +680,7 @@ export class Line {
     }
 
     const newLine = new Line(options, this.level + 1);
-    Object.defineProperty(newLine, 'parent', { get: () => newParent });
+    Object.defineProperty(newLine, 'parent', { get: () => newParent, configurable: true });
     if (newParent.children) {
       if (index && index < newParent.children.length) {
         newParent.children.splice(index - 1, 0, newLine);
@@ -694,7 +694,7 @@ export class Line {
   addLine (newLine, index) {
     if (newLine instanceof Line) {
       let newParent = this;
-      Object.defineProperty(newLine, 'parent', { get: () => newParent });
+      Object.defineProperty(newLine, 'parent', { get: () => newParent, configurable: true });
       if (newParent.children) {
         if (index && index < this.children.length) {
           newParent.children.splice(index - 1, 0, newLine);
@@ -714,21 +714,169 @@ export class Line {
     }
   }
 
-  move (newIndex, addAsChild) {
-    const clone = cloneLine(this);
-    console.log(clone);
-    /*
+  /**
+   * Move this line to a new position in the budget
+   * @param {string|Line} target - Target index string (e.g., "1.2") or Line object
+   * @param {boolean|string} addAsChild - If true/'child': add as last child of target
+   *                                      If false: move to the position indicated by target index
+   *                                      If 'before': insert before target line
+   *                                      If 'after': insert after target line
+   * @returns {boolean} Success status
+   */
+  move (target, addAsChild = false) {
     const oldIndex = this.index;
-    const indexMap = addAsChild ? [] : newIndex.toString().split('.');
-    const parentIndex = addAsChild ? newIndex : indexMap.slice(0, -1).join('.');
-    const newParent = this.root.getLine(parentIndex);
-    if (newParent) {
-      newParent.addLine(cloneLine(JSON.stringify(this)));
-      this.remove();
-      newParent.viewUpdate('down');
-      log('Line ' + oldIndex + ' moved to line ' + newIndex, 'info');
-    } else log('There is no line at the index' + parentIndex, 'error');
-    */
+    const oldParent = this.parent;
+
+    // Can't move root
+    if (this.level === 0) {
+      log('Cannot move the root budget line', 'error');
+      return false;
+    }
+
+    // Determine target line and new parent
+    let targetLine, newParent, insertPosition;
+
+    if (target instanceof Line) {
+      targetLine = target;
+    } else if (typeof target === 'string') {
+      targetLine = this.root.getLine(target);
+    } else {
+      log('Invalid target: must be a Line object or index string', 'error');
+      return false;
+    }
+
+    if (!targetLine) {
+      log('Target line not found: ' + target, 'error');
+      return false;
+    }
+
+    // Can't move to self
+    if (targetLine === this) {
+      log('Cannot move a line to itself', 'error');
+      return false;
+    }
+
+    // Can't move to a descendant
+    if (this.descendants.includes(targetLine)) {
+      log('Cannot move a line to its own descendant', 'error');
+      return false;
+    }
+
+    // Determine new parent and insert position based on addAsChild mode
+    if (addAsChild === true || addAsChild === 'child') {
+      // Add as last child of target
+      newParent = targetLine;
+      insertPosition = newParent.children ? newParent.children.length : 0;
+    } else if (addAsChild === 'before') {
+      // Insert before target (as sibling)
+      newParent = targetLine.parent;
+      insertPosition = targetLine.lineNumber - 1; // 0-based index
+    } else if (addAsChild === 'after') {
+      // Insert after target (as sibling)
+      newParent = targetLine.parent;
+      insertPosition = targetLine.lineNumber; // Insert after = at lineNumber (0-based)
+    } else {
+      // addAsChild is false: target index specifies the position
+      // e.g., "2.1" means become the 1st child of line 2
+      if (typeof target === 'string') {
+        const indexMap = target.split('.');
+        const positionInParent = parseInt(indexMap.pop()); // Last number is position (1-based)
+        const parentIndex = indexMap.join('.');
+        newParent = parentIndex ? this.root.getLine(parentIndex) : this.root;
+        insertPosition = positionInParent - 1; // Convert to 0-based
+      } else {
+        // Target is a Line, treat as "after"
+        newParent = targetLine.parent;
+        insertPosition = targetLine.lineNumber;
+      }
+    }
+
+    if (!newParent) {
+      log('Could not determine new parent for move', 'error');
+      return false;
+    }
+
+    // Check if new parent can have children (level constraint)
+    if (!newParent.canAddChildren()) {
+      log('Cannot move to ' + newParent.levelName + ' (max level reached)', 'error');
+      return false;
+    }
+
+    // Check if this line (with its descendants) would exceed max level
+    const maxDescendantDepth = this.getMaxDescendantDepth();
+    const newLevel = newParent.level + 1;
+    if (newLevel + maxDescendantDepth > Line.maxLevel) {
+      log('Cannot move: descendants would exceed max level', 'error');
+      return false;
+    }
+
+    // --- Perform the move ---
+
+    // 1. Remove from old parent's children array
+    const oldPosition = oldParent.children.indexOf(this);
+    oldParent.children.splice(oldPosition, 1);
+
+    // 2. Remove from DOM (temporarily)
+    this.view.node.remove();
+
+    // 3. Ensure new parent has children array
+    if (!newParent.children) newParent.children = [];
+
+    // 4. Adjust insert position if moving within same parent
+    if (newParent === oldParent && insertPosition > oldPosition) {
+      insertPosition--;
+    }
+
+    // 5. Clamp insert position to valid range
+    insertPosition = Math.max(0, Math.min(insertPosition, newParent.children.length));
+
+    // 6. Insert into new parent's children array
+    newParent.children.splice(insertPosition, 0, this);
+
+    // 7. Update parent reference
+    const self = this;
+    Object.defineProperty(this, 'parent', { get: () => newParent, configurable: true });
+
+    // 8. Insert into DOM at correct position
+    if (insertPosition < newParent.children.length - 1) {
+      // Insert before the next sibling
+      const nextSibling = newParent.children[insertPosition + 1];
+      newParent.view.children.insertBefore(this.view.node, nextSibling.view.node);
+    } else {
+      // Append at end
+      newParent.view.children.appendChild(this.view.node);
+    }
+
+    // 9. Refresh levels on moved line and all its descendants
+    this.refreshLevels();
+
+    // 10. Clear old parent's leaf data if it no longer has children
+    if (oldParent.children.length === 0) {
+      // Old parent is now a leaf - it may need its values restored
+      // (but we don't track original values, so just leave as is)
+    }
+
+    // 11. Update views
+    oldParent.viewUpdate('up');
+    newParent.viewUpdate('down');
+    this.viewUpdate('down');
+
+    log('Line ' + oldIndex + ' moved to ' + this.index, 'info');
+    return true;
+  }
+
+  /**
+   * Get the maximum depth of descendants (for level validation)
+   * @returns {number} Maximum levels below this line
+   */
+  getMaxDescendantDepth () {
+    if (!this.children || this.children.length === 0) return 0;
+    let maxDepth = 0;
+    for (const child of this.children) {
+      const childDepth = 1 + child.getMaxDescendantDepth();
+      if (childDepth > maxDepth) maxDepth = childDepth;
+    }
+    return maxDepth;
   }
 
   // FIX: Added this. and callback parameter
