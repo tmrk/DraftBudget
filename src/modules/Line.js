@@ -22,36 +22,41 @@ export class Line {
     const nextLevelName = canAddChildren ? config.levelNames[level + 1] : null;
 
     // The view needs to be initialised before looping through the options
+    // Create delete button with title
+    const buttonDelete = n('span.button.delete|title=Delete this row', '',
+      {click: function () {
+          this.remove();
+        }.bind(this)
+      }
+    );
+
+    // Create add button - state will be updated dynamically in viewUpdate based on actual level
+    const buttonAdd = n('span.button.add', '',
+      {click: function (e) {
+          e.stopImmediatePropagation();
+          if (!this.canAddChildren()) {
+            return; // Disabled state - do nothing
+          }
+          this.add();
+          const newLine = this.children[this.children.length - 1];
+          newLine.viewEdit('title');
+        }.bind(this)
+      }
+    );
+
     this.view = {
-      buttonDelete: n('span.button.delete', '',
-        {click: function () {
-            this.remove();
-          }.bind(this)
-        }
-      ),
-      buttonAdd: n('span.button.add', '',
-        {click: function (e) {
-            e.stopImmediatePropagation(); // so that it doesn't fire removeInput() upon clicking on document
-            if (!this.canAddChildren()) {
-              log('Cannot add children to ' + this.levelName + ' (max level reached)', 'warn');
-              return;
-            }
-            this.add();
-            const newLine = this.children[this.children.length - 1];
-            newLine.viewEdit('title');
-           }.bind(this)
-        }
-      ),
+      buttonDelete: buttonDelete,
+      buttonAdd: buttonAdd,
       props: {
         index: n('div.col1.index', n('span', this.index)),
-        title: n('div.col2.title.editable', n('span', this.title)),
-        unitNumber: n('div.col3.unitnumber.editable', n('span', this.unitNumber)),
-        unitType: n('div.col4.unittype.editable', n('span', this.unitType)),
-        unitCost: n('div.col5.unitcost.alignright.editable', n('span', formatN(this.unitCost))),
-        frequency: n('div.col6.frequency.alignright.editable', n('span', this.frequency)),
-        cost: n('div.col7.cost.alignright', n('span', formatN(this.cost))),
-        total: n('div.col8.total.alignright', n('span', formatN(this.total))),
-        currency: n('div.col9.currency.editable', n('span', this.currency)),
+        title: n('div.col2.title.editable|title=Title', n('span', this.title)),
+        unitNumber: n('div.col3.unitnumber.editable|title=Unit quantity', n('span', this.unitNumber)),
+        unitType: n('div.col4.unittype.editable|title=Unit type', n('span', this.unitType)),
+        unitCost: n('div.col5.unitcost.alignright.editable|title=Unit cost', n('span', formatN(this.unitCost))),
+        cost: n('div.col6.cost.alignright|title=Full cost', n('span', formatN(this.cost))),
+        frequency: n('div.col7.frequency.alignright.editable|title=Frequency', n('span', this.frequency)),
+        total: n('div.col8.total.alignright|title=Line total', n('span', formatN(this.total))),
+        currency: n('div.col9.currency.editable|title=Currency', n('span', this.currency)),
         tools: n('div.col10.tools')
       },
       children: n('ul.children'),
@@ -95,8 +100,8 @@ export class Line {
         this.view.props.unitNumber,
         this.view.props.unitType,
         this.view.props.unitCost,
-        this.view.props.frequency,
         this.view.props.cost,
+        this.view.props.frequency,
         this.view.props.total,
         this.view.props.currency,
         this.view.props.tools
@@ -383,7 +388,6 @@ export class Line {
     this.view.children.appendChild(newLine.view.node);
     newLine.view.node.dataset.level = this.level + 1;
     newLine.view.node.classList.add('level' + (this.level + 1));
-    if (this.level + 2 == config.levelNames.length) newLine.view.node.classList.add('hide-add-button');
     newLine.viewUpdate();
     newLine.parent.viewUpdate('up');
   }
@@ -410,8 +414,10 @@ export class Line {
       };
       document.addEventListener('click', removeInput);
 
+      // Use empty string for undefined/null values to avoid showing "undefined"
+      const inputValue = (originalValue !== undefined && originalValue !== null) ? originalValue : '';
       const inputEdit = n('input'
-                      + '|value=' + originalValue
+                      + '|value=' + inputValue
                       + '|placeholder=' + this.defaultTitle,
                       '', {
         input: function (event) {
@@ -538,6 +544,16 @@ export class Line {
       if (this.children && this.children.length) leafFields[i].classList.add('invisible');
       else leafFields[i].classList.remove('invisible');
     }
+
+    // Update add button state based on actual level
+    const canAdd = this.canAddChildren();
+    if (canAdd) {
+      this.view.buttonAdd.classList.remove('disabled');
+      this.view.buttonAdd.setAttribute('title', 'Add a new ' + config.levelNames[this.level + 1]);
+    } else {
+      this.view.buttonAdd.classList.add('disabled');
+      this.view.buttonAdd.removeAttribute('title');
+    }
   }
 
   viewUpdateGrandTotal () {
@@ -581,8 +597,8 @@ export class Line {
         n('.col3', n('span', 'Qty')),
         n('.col4', n('span', 'Type')),
         n('.col5', n('span', 'Rate')),
-        n('.col6', n('span', 'Fr')),
-        n('.col7', n('span', 'Cost')),
+        n('.col6', n('span', 'Cost')),
+        n('.col7', n('span', 'Fr')),
         n('.col8', n('span', 'Total')),
         n('.col9', n('span', 'Cur')),
         n('.col10', n('span', ''))

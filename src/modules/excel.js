@@ -63,8 +63,8 @@ export async function exportToExcel(rootLine) {
     { header: 'Qty', key: 'qty', width: 8, style: integerStyle },
     { header: 'Type', key: 'type', width: 8, style: centerStyle },
     { header: 'Rate', key: 'rate', width: 12, style: currencyStyle },
-    { header: 'Fr', key: 'freq', width: 6, style: integerStyle },
     { header: 'Cost', key: 'cost', width: 14, style: currencyStyle },
+    { header: 'Fr', key: 'freq', width: 6, style: integerStyle },
     { header: 'Total', key: 'total', width: 14, style: currencyStyle },
     { header: 'Cur', key: 'currency', width: 6, style: centerStyle }
   ];
@@ -193,11 +193,11 @@ export async function exportToExcel(rootLine) {
       rateCell.value = line.unitCost || 0;
       freqCell.value = line.frequency || 1;
 
-      // Cost formula: Qty * Rate
+      // Cost formula: Qty * Rate (C * E -> F)
       costCell.value = { formula: `C${currentRow}*E${currentRow}` };
 
-      // Total formula: Cost * Freq
-      totalCell.value = { formula: `G${currentRow}*F${currentRow}` };
+      // Total formula: Cost * Freq (F * G -> H)
+      totalCell.value = { formula: `F${currentRow}*G${currentRow}` };
     }
 
     // Apply background color based on level

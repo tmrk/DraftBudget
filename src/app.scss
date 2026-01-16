@@ -115,8 +115,8 @@ body {
   .col3 { width: var(--col-qty); min-width: var(--col-qty); }
   .col4 { width: var(--col-type); min-width: var(--col-type); }
   .col5 { width: var(--col-rate); min-width: var(--col-rate); }
-  .col6 { width: var(--col-freq); min-width: var(--col-freq); }
-  .col7 { width: var(--col-cost); min-width: var(--col-cost); }
+  .col6 { width: var(--col-cost); min-width: var(--col-cost); }
+  .col7 { width: var(--col-freq); min-width: var(--col-freq); }
   .col8 { width: var(--col-total); min-width: var(--col-total); }
   .col9 { width: var(--col-curr); min-width: var(--col-curr); }
   .col10 { width: var(--col-tools); min-width: var(--col-tools); }
@@ -329,29 +329,30 @@ li.line.level1 > .props > div > span {
 }
 
 // === Column alignments for data rows ===
-// Right-aligned: Rate (col5), Cost (col7), Total (col8)
+// Right-aligned: Rate (col5), Cost (col6), Total (col8)
 li.line > .props {
   > .col5 > span,
-  > .col7 > span,
+  > .col6 > span,
   > .col8 > span {
     justify-content: flex-end;
     text-align: right;
   }
 
-  // Center-aligned: Qty (col3), Type (col4), Fr (col6), Cur (col9)
+  // Center-aligned: Qty (col3), Type (col4), Fr (col7), Cur (col9)
   > .col3 > span,
   > .col4 > span,
-  > .col6 > span,
+  > .col7 > span,
   > .col9 > span {
     justify-content: center;
     text-align: center;
   }
 }
 
-// Hide add button on max level (level 4 = Sub-activity)
-li.line.level4 > .props > .col10 > .button.add,
-.hide-add-button .tools .button.add {
-  display: none;
+// Disabled add button on max level
+.button.add.disabled {
+  opacity: 0.25;
+  cursor: default;
+  pointer-events: none;
 }
 
 // === Editing Mode - Input fills entire cell ===
@@ -453,7 +454,6 @@ body > header {
   padding: 2.5ch 0;
   text-align: center;
   background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
 
   h1 {
     font-size: 1.8em;
@@ -482,7 +482,6 @@ body > footer {
   justify-content: center;
   text-align: center;
   color: $text-muted;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
   font-size: 0.85em;
 
   strong {
