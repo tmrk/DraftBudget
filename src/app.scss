@@ -163,7 +163,7 @@ body {
   display: flex;
   align-items: stretch;
   gap: $gap-size;
-  background: $bg-color; // Gap color shows through
+  background: transparent; // Gaps show page background
 
   // All columns - cells with individual backgrounds
   > *[class^="col"] {
@@ -214,7 +214,7 @@ body {
     justify-content: stretch;
     align-items: stretch;
     gap: $gap-size;
-    background: $bg-color; // Gap shows through between buttons
+    background: transparent; // Gap shows page background between buttons
 
     > span.button {
       flex: 1;
@@ -254,7 +254,7 @@ body {
 // === Header Row ===
 .budget > header.line > .props {
   height: var(--header-height);
-  background: $bg-color;
+  background: transparent; // Gaps show page background
 
   > *[class^="col"] {
     background-color: rgba(255, 255, 255, 0.06);
