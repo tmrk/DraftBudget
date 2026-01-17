@@ -1,55 +1,46 @@
 # DraftBudget
 
-A budget creator app with hierarchical line items and currency conversion.
+A hierarchical budget creator with currency conversion and overhead calculations.
 
-## Project Structure
+@README.md
+@package.json
+@docs/PROJECT_OVERVIEW.md
+@docs/DEV_COMMANDS.md
+@docs/ARCHITECTURE.md
+@docs/CURRENT_PRIORITIES.md
+@docs/RECENT_CHANGES.md
 
-```
-src/
-├── index.js           # Entry point
-├── start.js           # Bootstrap (createBudget, start)
-├── app.scss           # Styles (SCSS)
-├── index.html         # HTML template
-└── modules/
-    ├── Line.js        # Line class (model)
-    ├── fx.js          # FX service (Frankfurter API)
-    ├── dom.js         # DOM helpers (n() function)
-    ├── serialize.js   # exportToJSON, cloneLine
-    ├── config.js      # Configuration
-    ├── log.js         # Logging utilities
-    └── globals.js     # Window API exposure
-```
+## Working Rules
 
-## Development
+1. **Vanilla JS only** — no frameworks, no TypeScript
+2. **Console-first** — all features must work via `window.*` API
+3. **Keep diffs minimal** — edit existing code, don't rewrite modules
+4. **Test in browser** — run `npm run dev`, test changes in console
+5. **Build before commit** — run `npm run build` to verify production bundle
+
+## Key Commands
 
 ```bash
-npm run dev    # Start dev server at localhost:8080
+npm run dev    # Dev server at localhost:8080
 npm run build  # Production build to dist/
 ```
 
-## Window API
+## Quick Reference
 
-Available in browser console:
-- `window.budget` / `window.b` - Main budget Line instance
-- `createBudget(name, options)` - Create new budget
-- `exportToJSON(line)` - Export to JSON
-- `cloneLine(line)` - Clone a line
-- `convert(amount, from, to)` - Currency conversion
-- `loadRates()` - Load FX rates
-- `rates` - Cached exchange rates by base currency
-- `symbols` - Currency symbols/names
-- `config` - App configuration
-- `quietMode` - Toggle logging (getter/setter)
+| What | Where |
+|------|-------|
+| Core model | `src/modules/Line.js` (Line + Overhead classes) |
+| Entry point | `src/index.js` → `src/start.js` |
+| Styles | `src/app.scss` |
+| Config | `src/modules/config.js` |
+| Window API | `src/modules/globals.js` |
 
-## FX Module
+## Console Examples
 
-Uses Frankfurter API (`api.frankfurter.dev/v1`) with per-base caching:
-- Rates cached in localStorage as `ratesByBase`
-- 24-hour cache TTL based on `fetchedAt` timestamp
-- `convert()` returns NaN for missing rates (triggers async fetch)
-- In-flight guard prevents duplicate requests
-- Debounced re-render after async rate fetch
-
-## Deployment
-
-Automatic via GitHub Actions on push to `main` branch.
+```javascript
+budget.add()                              // Add child to root
+budget.getLine('1.1').addOverhead({title:'VAT', percentage:0.2})
+budget.getLine('1').move('2', 'after')   // Move line 1 after line 2
+exportToJSON(budget)                      // Get JSON string
+exportToExcel(budget)                     // Download Excel file
+```

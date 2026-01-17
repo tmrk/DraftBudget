@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Bash(rm -r:*)"
+    ]
+  },
+  "ignorePaths": [
+    "node_modules",
+    "dist",
+    ".git",
+    "*.woff2",
+    "package-lock.json",
+    "coverage",
+    ".cache",
+    ".parcel-cache"
+  ]
+}
