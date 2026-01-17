@@ -8,10 +8,10 @@
 
 ## Important Settings
 
-1. **Entry**: `./src/index.js`
-2. **Output**: `dist/main.js` and `dist/main.css`
-3. **Terser mangle: false** — preserves function names for console API
-4. **Font handling**: woff2 files copied to `dist/fonts/`
+1. Entry: `./src/index.js`
+2. Output: `dist/main.js` and `dist/main.css`
+3. Terser `mangle: false` — preserves function names for console API
+4. Font handling: woff2 files copied to `dist/fonts/`
 
 ## When Editing Configs
 

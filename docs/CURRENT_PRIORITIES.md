@@ -15,6 +15,7 @@
 - Console-first API (all functions on `window`)
 - SCSS styling with level-based colours
 - GitHub Actions deployment to Pages
+- Responsive mobile layout with sticky columns (index, total, tools)
 
 ### Not Yet Implemented
 
@@ -43,8 +44,7 @@
 3. **Date range UI** — expose start/end dates in the view, add date picker
 4. **Print stylesheet** — `@media print` rules in `app.scss`
 5. **Keyboard shortcuts** — common actions (new line, delete, move up/down)
-6. **Responsive layout** — currently desktop-only; add mobile breakpoints
-7. **Test suite** — at minimum, unit tests for Line calculations
+6. **Test suite** — at minimum, unit tests for Line calculations
 
 ## Known Issues / Sharp Edges
 
@@ -54,3 +54,7 @@
 4. **No validation** — entering invalid currency code silently fails
 5. **Excel formulas are static** — overhead totals are values, not formulas
 6. **`npm test` fails** — placeholder only, no actual tests
+
+## Agent handover
+
+If switching between coding agents mid-task, keep `docs/NOW.md` current. It is the baton file used to hand over work safely.

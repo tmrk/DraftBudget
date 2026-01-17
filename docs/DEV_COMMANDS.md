@@ -73,3 +73,12 @@ None required. The app runs entirely client-side.
 | `symbols` | Currency codes and names |
 
 To clear all data: use the "Clear localStorage" button in the footer, or run `localStorage.clear()` in console.
+
+## Versioning
+
+Before the final push on any feature branch, bump the version in `package.json` using SemVer rules (see `docs/VERSIONING.md`).
+
+```bash
+npm version patch --no-git-tag-version
+# or: minor / major
+```

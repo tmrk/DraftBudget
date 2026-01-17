@@ -5,7 +5,7 @@
 ```
 DraftBudget/
 ├── .claude/                 # Claude Code settings
-│   └── settings.local.json  # Permission rules
+│   └── settings.json        # Permission rules (or settings.local.json for uncommitted local overrides)
 ├── .github/workflows/
 │   └── deploy.yml          # GitHub Pages deployment
 ├── dist/                    # Build output (gitignored contents except fonts)
@@ -30,7 +30,8 @@ DraftBudget/
 ├── webpack.dev.js          # Dev config (style-loader, devServer)
 ├── webpack.prod.js         # Prod config (MiniCssExtractPlugin, Terser)
 ├── package.json
-└── CLAUDE.md               # AI assistant instructions
+└── CLAUDE.md               # Claude Code entry instructions
+└── AGENTS.md               # Tool-agnostic agent instructions (Codex/OpenCode/etc.)
 ```
 
 ## Entry Points

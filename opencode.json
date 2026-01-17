@@ -1,0 +1,20 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    "AGENTS.md",
+    "CLAUDE.md",
+
+    "docs/NOW.md",
+    "docs/WORKFLOW.md",
+    "docs/VERSIONING.md",
+
+    "docs/PROJECT_OVERVIEW.md",
+    "docs/DEV_COMMANDS.md",
+    "docs/ARCHITECTURE.md",
+    "docs/CURRENT_PRIORITIES.md",
+    "docs/RECENT_CHANGES.md",
+
+    ".claude/rules/frontend.md",
+    ".claude/rules/webpack.md"
+  ]
+}
