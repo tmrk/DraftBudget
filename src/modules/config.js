@@ -17,11 +17,11 @@ export const config = {
   default: {
     currency: 'USD',
     lineColours: [
-      'rgba(255,255,255,0.1)',
-      'rgba(255,255,255,0.2)',
-      'rgba(255,255,255,0.3)',
-      'rgba(255,255,255,0.5)',
-      'rgba(255,255,255,0.65)'
+      'rgba(255,255,255,0.02)',
+      'rgba(255,255,255,0.08)',
+      'rgba(255,255,255,0.12)',
+      'rgba(255,255,255,0.16)',
+      'rgba(255,255,255,0.2)'
     ],
     warnBeforeDelete: false
   }

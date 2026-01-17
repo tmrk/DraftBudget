@@ -1,8 +1,24 @@
 // === JetBrains Mono Font (embedded) ===
 @font-face {
   font-family: 'JetBrains Mono';
+  src: url('./fonts/JetBrainsMono-ExtraLight.woff2') format('woff2');
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
   src: url('./fonts/JetBrainsMono-Regular.woff2') format('woff2');
   font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('./fonts/JetBrainsMono-Medium.woff2') format('woff2');
+  font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
@@ -27,19 +43,12 @@ $accent-red: rgba(220, 60, 60, 0.9);
 // Gap size for grid dividers
 $gap-size: 1px;
 
-// Level background colors (applied to cells)
-$level-colors: (
-  header: rgba(255, 255, 255, 0.08),
-  root: rgba(255, 255, 255, 0.04),
-  level1: rgba(255, 255, 255, 0.08),
-  level2: rgba(255, 255, 255, 0.12),
-  level3: rgba(255, 255, 255, 0.16),
-  level4: rgba(255, 255, 255, 0.20)
-);
+// Cell horizontal padding
+$cell-padding: calc(1ch - 1px);
 
-// Material Icons as data URIs
-$icon-delete: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'%3E%3Cpath d='M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z'/%3E%3C/svg%3E");
-$icon-add: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'%3E%3Cpath d='M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z'/%3E%3C/svg%3E");
+// Level background colors are now defined in config.js (config.default.lineColours)
+
+// Icons are now inline SVGs in Line.js
 
 // Header icons
 $icon-tag: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff' opacity='0.6'%3E%3Cpath d='M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z'/%3E%3C/svg%3E");
@@ -52,7 +61,6 @@ $icon-title: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' v
   list-style-type: none;
   user-select: none;
   -webkit-user-select: none;
-  cursor: default;
   box-sizing: border-box;
 }
 
@@ -95,31 +103,36 @@ body {
   text-align: center;
 
   // CSS Custom Properties for column widths (ch-based)
-  // Index: 9ch fits "1.1.1.1" (7 chars + 2ch padding buffer)
+  // These are minimum widths - JS will auto-resize based on content
   --col-index: 9ch;
   --col-title: 20ch;
-  --col-qty: 5ch;
-  --col-type: 6ch;
-  --col-rate: 9ch;
-  --col-freq: 4ch;
-  --col-cost: 10ch;
-  --col-total: 10ch;
-  --col-curr: 5ch;
+  --col-qty: 2ch;       // unitNumber min
+  --col-type: 3ch;      // unitType min
+  --col-rate: 7ch;      // unitCost min
+  --col-ucurr: 3ch;     // unitCurrency min
+  --col-cost: 7ch;      // cost min (hidden)
+  --col-freq: 2ch;      // frequency min
+  --col-total: 7ch;     // total min
+  --col-curr: 3ch;      // currency min
   --col-tools: 56px;
   --row-height: 3.2ch;
   --header-height: 4ch;
 
-  // Column widths
+  // Column widths - col2 (title) flexes, others use CSS vars set by JS
   .col1 { width: var(--col-index); min-width: var(--col-index); }
   .col2 { width: var(--col-title); flex-grow: 1; }
-  .col3 { width: var(--col-qty); min-width: var(--col-qty); }
-  .col4 { width: var(--col-type); min-width: var(--col-type); }
-  .col5 { width: var(--col-rate); min-width: var(--col-rate); }
-  .col6 { width: var(--col-cost); min-width: var(--col-cost); }
-  .col7 { width: var(--col-freq); min-width: var(--col-freq); }
-  .col8 { width: var(--col-total); min-width: var(--col-total); }
-  .col9 { width: var(--col-curr); min-width: var(--col-curr); }
-  .col10 { width: var(--col-tools); min-width: var(--col-tools); }
+  .col3 { width: var(--col-qty); min-width: 2ch; }
+  .col4 { width: var(--col-type); min-width: 3ch; }
+  .col5 { width: var(--col-rate); min-width: 7ch; }
+  .col6 { width: var(--col-ucurr); min-width: 3ch; }
+  .col7 { width: var(--col-cost); min-width: 7ch; }
+  .col8 { width: var(--col-freq); min-width: 2ch; }
+  .col9 { width: var(--col-total); min-width: 7ch; }
+  .col10 { width: var(--col-curr); min-width: 3ch; }
+  .col11 { width: var(--col-tools); min-width: var(--col-tools); }
+
+  // Hidden columns (kept in DOM for future settings panel)
+  .col7 { display: none; }
 
   // Root list
   > .root {
@@ -170,12 +183,12 @@ body {
     display: flex;
     align-items: stretch; // Make children fill height
     overflow: hidden;
-    background-color: map-get($level-colors, level1); // Default, overridden by level classes
+    // Background color applied via JS from config.default.lineColours
 
     // Span fills entire cell, text is padded inside
     > span {
       width: 100%;
-      padding: 0 0.6ch;
+      padding: 0 $cell-padding;
       display: flex;
       align-items: center;
       overflow: hidden;
@@ -208,7 +221,7 @@ body {
   }
 
   // Tools column
-  > .col10 {
+  > .col11 {
     padding: 0;
     display: flex;
     justify-content: stretch;
@@ -222,30 +235,35 @@ body {
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: background-color 0.1s ease;
-      background-size: 18px 18px;
-      background-position: center;
-      background-repeat: no-repeat;
-      background-color: map-get($level-colors, level1); // Match row level
+      overflow: hidden;
+      // Background color applied via JS from config.default.lineColours
+
+      svg {
+        width: 20px;
+        height: 20px;
+        fill: $text-color;
+        opacity: 0.5;
+        flex-shrink: 0;
+      }
     }
 
     > .delete {
-      background-image: $icon-delete;
-      opacity: 0.4;
-
       &:hover {
-        background-color: $accent-red;
-        opacity: 1;
+        background-color: $accent-red !important;
+
+        svg {
+          opacity: 1;
+        }
       }
     }
 
     > .add {
-      background-image: $icon-add;
-      opacity: 0.4;
-
       &:hover {
-        background-color: $accent-green;
-        opacity: 1;
+        background-color: $accent-green !important;
+
+        svg {
+          opacity: 1;
+        }
       }
     }
   }
@@ -254,10 +272,10 @@ body {
 // === Header Row ===
 .budget > header.line > .props {
   height: var(--header-height);
-  background: transparent; // Gaps show page background
+  background: transparent;
 
   > *[class^="col"] {
-    background-color: rgba(255, 255, 255, 0.06);
+    background-color: transparent;
 
     > span {
       justify-content: center; // Center header titles
@@ -271,8 +289,8 @@ body {
   }
 
   // Empty tools column in header
-  > .col10 {
-    background-color: rgba(255, 255, 255, 0.06);
+  > .col11 {
+    background-color: transparent;
   }
 }
 
@@ -280,12 +298,8 @@ body {
 ul.root > li.line > .props {
   height: 5ch;
 
-  > div {
-    background-color: map-get($level-colors, root);
-
-    > span {
-      font-weight: bold;
-    }
+  > div > span {
+    font-weight: bold;
   }
 
   > div.alignright > span {
@@ -297,52 +311,49 @@ ul.root > li.line > .props {
     visibility: hidden;
   }
 
-  // Tools on root line
-  > .col10 {
-    > span.button {
-      background-color: map-get($level-colors, root);
-    }
-
-    // Hide delete on root line
-    > .button.delete {
-      display: none;
-    }
+  // Tools on root line - hide delete on root line
+  > .col11 > .button.delete {
+    display: none;
   }
 }
 
-// === Level-specific backgrounds (applied to cells) ===
-@for $i from 1 through 4 {
-  li.line.level#{$i} > .props {
-    > *[class^="col"] {
-      background-color: map-get($level-colors, level#{$i});
-    }
+// Level-specific backgrounds are now applied via JavaScript from config.default.lineColours
 
-    > .col10 > span.button {
-      background-color: map-get($level-colors, level#{$i});
-    }
-  }
-}
-
-// Level 1 is bold
+// === Level-specific font weights ===
+// Root and Level 1: Bold (700)
+ul.root > li.line > .props > div > span,
 li.line.level1 > .props > div > span {
-  font-weight: bold;
+  font-weight: 700;
+}
+
+// Level 2: Medium (500)
+li.line.level2 > .props > div > span {
+  font-weight: 500;
+}
+
+// Level 3: Regular (400) - default, no override needed
+
+// Level 4+: ExtraLight (200)
+li.line.level4 > .props > div > span {
+  font-weight: 200;
 }
 
 // === Column alignments for data rows ===
-// Right-aligned: Rate (col5), Cost (col6), Total (col8)
+// Right-aligned: Rate (col5), Cost (col7), Total (col9)
 li.line > .props {
   > .col5 > span,
-  > .col6 > span,
-  > .col8 > span {
+  > .col7 > span,
+  > .col9 > span {
     justify-content: flex-end;
     text-align: right;
   }
 
-  // Center-aligned: Qty (col3), Type (col4), Fr (col7), Cur (col9)
+  // Center-aligned: Qty (col3), Type (col4), Unit Cur (col6), Fr (col8), Cur (col10)
   > .col3 > span,
   > .col4 > span,
-  > .col7 > span,
-  > .col9 > span {
+  > .col6 > span,
+  > .col8 > span,
+  > .col10 > span {
     justify-content: center;
     text-align: center;
   }
@@ -350,16 +361,18 @@ li.line > .props {
 
 // Disabled add button on max level
 .button.add.disabled {
-  opacity: 0.25;
-  cursor: default;
   pointer-events: none;
+
+  svg path {
+    fill: rgba(255, 255, 255, 0.2);
+  }
 }
 
 // === Editing Mode - Input fills entire cell ===
 .editing input {
   width: 100%;
   height: 100%;
-  padding: 0 0.6ch; // Match span padding for text alignment
+  padding: 0 $cell-padding; // Match span padding for text alignment
   border: none;
   outline: none;
   background: #ffffff;
@@ -375,9 +388,53 @@ li.line > .props {
   text-align: right;
 }
 
-// === Overhead ===
-.overhead > span {
-  padding-right: 4ch;
+// === Overhead Lines ===
+li.line.overhead {
+  > .props {
+    // Overhead lines use slightly muted text for visual distinction
+    opacity: 0.85;
+
+    // Index column shows "OH1-1.2.3" format
+    > .col1.overhead-index > span {
+      font-style: italic;
+      color: $text-muted;
+    }
+
+    // Percentage display in col5
+    > .col5.percentage > span {
+      justify-content: flex-end;
+      text-align: right;
+    }
+
+    // Invisible columns still take up space
+    > .invisible {
+      > span {
+        visibility: hidden;
+      }
+    }
+
+    // Move up/down buttons
+    > .col11 {
+      > .move-up,
+      > .move-down {
+        &:hover {
+          background-color: rgba(100, 150, 255, 0.4) !important;
+
+          svg {
+            opacity: 1;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Level-specific styling for overhead lines
+li.line.overhead.level1 > .props > div > span,
+li.line.overhead.level2 > .props > div > span,
+li.line.overhead.level3 > .props > div > span,
+li.line.overhead.level4 > .props > div > span {
+  font-weight: 400; // Normal weight for all overhead lines
 }
 
 // === Grand Total Row ===
@@ -385,7 +442,6 @@ li.line > .props {
   height: 4.5ch;
   padding: 0;
   margin-top: $gap-size;
-  background: rgba(255, 255, 255, 0.08);
   display: flex;
   justify-content: flex-end;
   align-items: center;
@@ -410,7 +466,7 @@ li.line > .props {
 
   .currency {
     width: var(--col-curr);
-    padding: 0 0.6ch;
+    padding: 0 $cell-padding;
   }
 
   // Spacer for tools column alignment

@@ -6,6 +6,7 @@ import { exportToExcel } from './excel.js';
 import { convert, prewarmDefault, prewarmAll, ratesByBase, symbols } from './fx.js';
 import { config } from './config.js';
 import { syslog, log, getQuietMode, setQuietMode } from './log.js';
+import { Overhead } from './Line.js';
 
 /**
  * Expose all public APIs on window for console access
@@ -19,6 +20,9 @@ export function exposeGlobals() {
   window.convert = convert;
   window.loadRates = prewarmDefault;  // Alias for backwards compat
   window.prewarmAll = prewarmAll;     // Debug action
+
+  // Classes (for console access and instanceof checks)
+  window.Overhead = Overhead;
 
   // Data (expose by reference so updates reflect)
   Object.defineProperty(window, 'rates', {
