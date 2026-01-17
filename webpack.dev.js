@@ -21,5 +21,6 @@ module.exports = merge(common, {
     hot: true,
     open: true,
     port: 8080,
+    host: '0.0.0.0', // Allow access from other devices on the network
   },
 });

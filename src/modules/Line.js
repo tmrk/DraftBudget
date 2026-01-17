@@ -1179,6 +1179,22 @@ export class Line {
   }
 
   /**
+   * Recursively reposition all overheads in the tree
+   * Call this after appendToBody to fix overhead positioning from cloneLine
+   */
+  repositionAllOverheads() {
+    // Reposition this line's overheads
+    this.viewRepositionOverheads();
+
+    // Recursively process children
+    if (this.children) {
+      for (const child of this.children) {
+        child.repositionAllOverheads();
+      }
+    }
+  }
+
+  /**
    * Update all overhead views for this line
    */
   viewUpdateOverheads() {
@@ -1245,6 +1261,8 @@ export class Line {
         })
       ]));
       this.root.appendedToBody = true;
+      // Fix overhead positioning after DOM is attached (fixes cloneLine timing issue)
+      this.root.repositionAllOverheads();
       // Auto-resize columns based on content
       Line.resizeColumns();
     } else log('The root of this budget has already been added to the page.', 'error');
